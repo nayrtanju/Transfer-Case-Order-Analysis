@@ -12,13 +12,14 @@ import pandas as pd
 from openpyxl.styles import Font, PatternFill
 from openpyxl.drawing.image import Image as XLImage
 
+
 st.set_page_config(
-    page_title="Axle Whine Order Analysis Tool",
-    page_icon="🚗",
+    page_title="NVH Analysis Suite",
     layout="wide"
 )
 
-st.title("🚗 Axle Whine Order Analysis Tool")
+st.title("NVH Analysis Suite")
+
 
 try:
     from order_analysis import (
@@ -38,7 +39,7 @@ MAX_ROWS = 3000000
 G_TO_MS2 = 9.80665
 
 
-TARGETS = {
+AXLE_TARGETS = {
     "Diesel": {
         "Front Axle": {
             "rpm": np.array([1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500]),
@@ -62,7 +63,36 @@ TARGETS = {
 }
 
 
-TARGET_ORDERS = [10.0, 20.0]
+TRANSFER_CASE_TARGET_RPM = np.array(
+    [1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500]
+)
+
+TRANSFER_CASE_ORDERS = {
+    63.0: {
+        "label": "63.00 Order - Gear Mesh",
+        "target_rpm": TRANSFER_CASE_TARGET_RPM,
+        "target_amp": np.array([5.0, 7.5, 10.0, 12.5, 15.0, 17.5, 20.0, 22.5]),
+        "harmonic": "1st"
+    },
+    126.0: {
+        "label": "126.00 Order - 2nd Harmonic",
+        "target_rpm": None,
+        "target_amp": None,
+        "harmonic": "2nd"
+    },
+    85.05: {
+        "label": "85.05 Order - Gear Mesh",
+        "target_rpm": TRANSFER_CASE_TARGET_RPM,
+        "target_amp": np.array([2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]),
+        "harmonic": "1st"
+    },
+    170.10: {
+        "label": "170.10 Order - 2nd Harmonic",
+        "target_rpm": None,
+        "target_amp": None,
+        "harmonic": "2nd"
+    }
+}
 
 
 def convert_csv_g_to_ms2_if_needed(headers, data):
@@ -170,6 +200,7 @@ def format_comparison_sheet(writer, sheet_name):
 
     green_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
     red_fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+    info_fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")
     header_fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")
 
     for cell in ws[1]:
@@ -191,6 +222,8 @@ def format_comparison_sheet(writer, sheet_name):
                 fill = green_fill
             elif status_cell.value == "FAIL":
                 fill = red_fill
+            elif status_cell.value == "INFO":
+                fill = info_fill
             else:
                 fill = None
 
@@ -217,28 +250,29 @@ def format_curve_sheet(writer, sheet_name):
         ws.column_dimensions[col_letter].width = 16
 
 
-def create_curve_plot_png(curve_df, order_value, vin_number, fuel_type, axle_type):
+def create_curve_plot_png(curve_df, order_label, vin_number, analysis_type, vehicle_config):
     fig, ax = plt.subplots(figsize=(14, 8))
 
     ax.plot(curve_df["RPM"], curve_df["ChA"], label="ChA", linewidth=2)
     ax.plot(curve_df["RPM"], curve_df["ChB"], label="ChB", linewidth=2)
     ax.plot(curve_df["RPM"], curve_df["ChC"], label="ChC", linewidth=2)
 
-    ax.plot(
-        curve_df["RPM"],
-        curve_df["Target"],
-        label="Target Curve",
-        color="red",
-        linewidth=5
-    )
+    if "Target" in curve_df.columns:
+        ax.plot(
+            curve_df["RPM"],
+            curve_df["Target"],
+            label="Target Curve",
+            color="red",
+            linewidth=5
+        )
 
     ax.set_title(
-        f"{int(order_value)}. Order vs RPM | VIN: {vin_number} | {fuel_type} | {axle_type}",
+        f"{order_label} vs RPM | VIN: {vin_number} | {analysis_type} | {vehicle_config}",
         fontsize=16
     )
 
     ax.set_xlabel("RPM", fontsize=13)
-    ax.set_ylabel(f"{int(order_value)}. Order Amplitude [m/s²]", fontsize=13)
+    ax.set_ylabel("Order Amplitude [m/s²]", fontsize=13)
 
     ax.grid(True, alpha=0.3)
     ax.legend(loc="upper right", fontsize=12)
@@ -257,15 +291,23 @@ def create_curve_plot_png(curve_df, order_value, vin_number, fuel_type, axle_typ
     return img_buffer
 
 
-def add_png_plot_to_sheet(writer, sheet_name, curve_df, order_value, vin_number, fuel_type, axle_type):
+def add_png_plot_to_sheet(
+    writer,
+    sheet_name,
+    curve_df,
+    order_label,
+    vin_number,
+    analysis_type,
+    vehicle_config
+):
     ws = writer.book[sheet_name]
 
     img_buffer = create_curve_plot_png(
         curve_df=curve_df,
-        order_value=order_value,
+        order_label=order_label,
         vin_number=vin_number,
-        fuel_type=fuel_type,
-        axle_type=axle_type
+        analysis_type=analysis_type,
+        vehicle_config=vehicle_config
     )
 
     img = XLImage(img_buffer)
@@ -275,12 +317,12 @@ def add_png_plot_to_sheet(writer, sheet_name, curve_df, order_value, vin_number,
     ws.add_image(img, "G2")
 
 
-def make_excel_report(vehicle_info, results_by_order, curves_by_order):
+def make_excel_report(vehicle_info, results_by_order, curves_by_order, order_labels):
     output = BytesIO()
 
     vin_number = vehicle_info["VIN"]
-    fuel_type = vehicle_info["Fuel Type"]
-    axle_type = vehicle_info["Axle Type"]
+    analysis_type = vehicle_info["Analysis Type"]
+    vehicle_config = vehicle_info["Vehicle Config"]
 
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         pd.DataFrame([vehicle_info]).to_excel(
@@ -290,7 +332,7 @@ def make_excel_report(vehicle_info, results_by_order, curves_by_order):
         )
 
         for order_value, result_df in results_by_order.items():
-            sheet_name = f"{int(order_value)} Order Comparison"
+            sheet_name = f"{str(order_value).replace('.', '_')} Comparison"
             sheet_name = sheet_name[:31]
 
             result_df.to_excel(
@@ -302,7 +344,7 @@ def make_excel_report(vehicle_info, results_by_order, curves_by_order):
             format_comparison_sheet(writer, sheet_name)
 
         for order_value, curve_df in curves_by_order.items():
-            sheet_name = f"{int(order_value)} Order Curves"
+            sheet_name = f"{str(order_value).replace('.', '_')} Curves"
             sheet_name = sheet_name[:31]
 
             curve_df.to_excel(
@@ -317,18 +359,20 @@ def make_excel_report(vehicle_info, results_by_order, curves_by_order):
                 writer=writer,
                 sheet_name=sheet_name,
                 curve_df=curve_df,
-                order_value=order_value,
+                order_label=order_labels[order_value],
                 vin_number=vin_number,
-                fuel_type=fuel_type,
-                axle_type=axle_type
+                analysis_type=analysis_type,
+                vehicle_config=vehicle_config
             )
 
     output.seek(0)
     return output
 
 
-def analyze_target_order(
+def analyze_order(
     order_value,
+    order_label,
+    harmonic_label,
     time,
     rpm,
     channels,
@@ -339,11 +383,13 @@ def analyze_target_order(
     order_width,
     rpm_step,
     cal_factor,
-    target_rpm,
-    target_amp
+    target_rpm=None,
+    target_amp=None
 ):
     channel_curves = {}
     peak_results = []
+
+    has_target = target_rpm is not None and target_amp is not None
 
     for name, sig in channels.items():
 
@@ -385,31 +431,58 @@ def analyze_target_order(
         peak_rpm = float(rpm_sorted[peak_idx])
         peak_amp = float(amp_sorted[peak_idx])
 
-        target_at_peak = float(
-            np.interp(
-                peak_rpm,
+        if has_target:
+            target_curve = np.interp(
+                rpm_sorted,
                 target_rpm,
                 target_amp
             )
-        )
 
-        margin = peak_amp - target_at_peak
-        margin_percent = (
-            margin / target_at_peak * 100.0
-            if target_at_peak > 0
-            else np.nan
-        )
+            target_at_peak = float(
+                np.interp(
+                    peak_rpm,
+                    target_rpm,
+                    target_amp
+                )
+            )
 
-        status = "PASS" if peak_amp <= target_at_peak else "FAIL"
+            margin_curve = amp_sorted - target_curve
+            exceedance = np.maximum(margin_curve, 0.0)
+
+            exceedance_area = float(
+                np.trapz(
+                    exceedance,
+                    rpm_sorted
+                )
+            )
+
+            max_margin = float(np.max(margin_curve))
+            max_margin_percent = (
+                max_margin / target_at_peak * 100.0
+                if target_at_peak > 0
+                else np.nan
+            )
+
+            status = "PASS" if exceedance_area <= 1e-9 else "FAIL"
+
+        else:
+            target_at_peak = np.nan
+            max_margin = np.nan
+            max_margin_percent = np.nan
+            exceedance_area = np.nan
+            status = "INFO"
 
         peak_results.append({
             "Order": order_value,
+            "Order Label": order_label,
+            "Harmonic": harmonic_label,
             "Channel": name,
             "Peak RPM": peak_rpm,
             "Peak Amplitude [m/s²]": peak_amp,
             "Target at Peak RPM [m/s²]": target_at_peak,
-            "Margin [m/s²]": margin,
-            "Margin [%]": margin_percent,
+            "Max Margin [m/s²]": max_margin,
+            "Max Margin [%]": max_margin_percent,
+            "Exceedance Area [m/s²·RPM]": exceedance_area,
             "Status": status
         })
 
@@ -429,16 +502,25 @@ def analyze_target_order(
             curve["amp"]
         )
 
-    curve_df["Target"] = np.interp(
-        curve_df["RPM"],
-        target_rpm,
-        target_amp
-    )
+    if has_target:
+        curve_df["Target"] = np.interp(
+            curve_df["RPM"],
+            target_rpm,
+            target_amp
+        )
 
     return channel_curves, result_df, curve_df
 
 
-def plot_order_comparison(order_value, channel_curves, target_rpm, target_amp, vin_number, fuel_type, axle_type):
+def plot_order_comparison(
+    order_label,
+    channel_curves,
+    target_rpm,
+    target_amp,
+    vin_number,
+    analysis_type,
+    vehicle_config
+):
     fig, ax = plt.subplots(figsize=(12, 7))
 
     for name, curve in channel_curves.items():
@@ -448,18 +530,19 @@ def plot_order_comparison(order_value, channel_curves, target_rpm, target_amp, v
             label=name
         )
 
-    ax.plot(
-        target_rpm,
-        target_amp,
-        color="red",
-        linewidth=4,
-        label="Target Curve"
-    )
+    if target_rpm is not None and target_amp is not None:
+        ax.plot(
+            target_rpm,
+            target_amp,
+            color="red",
+            linewidth=4,
+            label="Target Curve"
+        )
 
     ax.set_xlabel("RPM")
-    ax.set_ylabel(f"{int(order_value)}. Order Amplitude [m/s²]")
+    ax.set_ylabel("Order Amplitude [m/s²]")
     ax.set_title(
-        f"{int(order_value)}. Order vs RPM | VIN: {vin_number} | {fuel_type} | {axle_type}"
+        f"{order_label} vs RPM | VIN: {vin_number} | {analysis_type} | {vehicle_config}"
     )
 
     ax.grid(True, alpha=0.3)
@@ -470,7 +553,7 @@ def plot_order_comparison(order_value, channel_curves, target_rpm, target_amp, v
 
 st.subheader("Vehicle Information")
 
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     vin_number = st.text_input(
@@ -482,18 +565,47 @@ with col1:
 vin_valid = bool(re.fullmatch(r"[A-Z0-9]{17}", vin_number))
 
 with col2:
-    fuel_type = st.selectbox(
-        "Fuel Type",
-        ["Select fuel type", "Diesel", "Gasoline"],
+    analysis_type = st.selectbox(
+        "Analysis Type",
+        [
+            "Axle Whine Order Analysis",
+            "Transfer Case Gear Mesh Analysis"
+        ],
         disabled=not vin_valid
     )
 
-with col3:
-    axle_type = st.selectbox(
-        "Axle Type",
-        ["Select axle type", "Front Axle", "Rear Axle"],
-        disabled=not vin_valid
-    )
+if analysis_type == "Axle Whine Order Analysis":
+    with col3:
+        fuel_type = st.selectbox(
+            "Fuel Type",
+            ["Select fuel type", "Diesel", "Gasoline"],
+            disabled=not vin_valid
+        )
+
+    with col4:
+        axle_type = st.selectbox(
+            "Axle Type",
+            ["Select axle type", "Front Axle", "Rear Axle"],
+            disabled=not vin_valid
+        )
+
+else:
+    fuel_type = "N/A"
+    axle_type = "Transfer Case / 6th Gear"
+
+    with col3:
+        st.text_input(
+            "Gear",
+            value="6th Gear",
+            disabled=True
+        )
+
+    with col4:
+        st.text_input(
+            "Component",
+            value="Transfer Case",
+            disabled=True
+        )
 
 if vin_number and not vin_valid:
     st.error("VIN must be exactly 17 characters and contain only letters and numbers.")
@@ -509,30 +621,63 @@ uploaded_file = st.file_uploader(
 )
 
 
-can_continue = (
-    vin_valid
-    and fuel_type != "Select fuel type"
-    and axle_type != "Select axle type"
-    and uploaded_file is not None
-)
+if analysis_type == "Axle Whine Order Analysis":
+    can_continue = (
+        vin_valid
+        and fuel_type != "Select fuel type"
+        and axle_type != "Select axle type"
+        and uploaded_file is not None
+    )
+else:
+    can_continue = (
+        vin_valid
+        and uploaded_file is not None
+    )
 
 if not can_continue:
     if not vin_valid:
-        st.warning("Please enter a valid 17-character VIN before selecting fuel type and uploading data.")
-    else:
+        st.warning("Please enter a valid 17-character VIN before selecting analysis type and uploading data.")
+    elif analysis_type == "Axle Whine Order Analysis":
         st.warning("Please select fuel type, select axle type, and upload measurement file.")
+    else:
+        st.warning("Please upload measurement file.")
     st.stop()
 
 
-target_rpm = TARGETS[fuel_type][axle_type]["rpm"]
-target_amp = TARGETS[fuel_type][axle_type]["amp"]
+if analysis_type == "Axle Whine Order Analysis":
+    base_target = AXLE_TARGETS[fuel_type][axle_type]
+
+    ANALYSIS_ORDERS = {
+        10.0: {
+            "label": "10th Order",
+            "target_rpm": base_target["rpm"],
+            "target_amp": base_target["amp"],
+            "harmonic": "Base"
+        },
+        20.0: {
+            "label": "20th Order",
+            "target_rpm": base_target["rpm"],
+            "target_amp": base_target["amp"],
+            "harmonic": "2nd"
+        }
+    }
+
+    default_max_order = 30
+    vehicle_config = f"{fuel_type} | {axle_type}"
+
+else:
+    ANALYSIS_ORDERS = TRANSFER_CASE_ORDERS
+    default_max_order = 200
+    vehicle_config = "Transfer Case | 6th Gear"
+
 
 st.success("Vehicle information and measurement file are ready for analysis.")
 
-info_cols = st.columns(3)
+info_cols = st.columns(4)
 info_cols[0].metric("VIN", vin_number)
-info_cols[1].metric("Fuel Type", fuel_type)
-info_cols[2].metric("Axle Type", axle_type)
+info_cols[1].metric("Analysis", analysis_type)
+info_cols[2].metric("Fuel Type", fuel_type)
+info_cols[3].metric("Configuration", axle_type)
 
 
 st.subheader("Analysis Settings")
@@ -553,8 +698,8 @@ with st.expander("Advanced Settings", expanded=False):
     max_order = st.slider(
         "Max order",
         5,
-        80,
-        30
+        250,
+        default_max_order
     )
 
     order_width = st.number_input(
@@ -566,7 +711,7 @@ with st.expander("Advanced Settings", expanded=False):
     )
 
 
-if st.button("Run Order Analysis", type="primary"):
+if st.button("Run Analysis", type="primary"):
 
     try:
         headers, data = load_measurement_file(uploaded_file)
@@ -580,16 +725,19 @@ if st.button("Run Order Analysis", type="primary"):
             "ChC": data[:, 3],
         }
 
-        with st.spinner("Order analysis is running..."):
+        with st.spinner("Analysis is running..."):
 
             curves_by_order = {}
             results_by_order = {}
             raw_curves_by_order = {}
+            order_labels = {}
 
-            for order_value in TARGET_ORDERS:
+            for order_value, order_info in ANALYSIS_ORDERS.items():
 
-                channel_curves, result_df, curve_df = analyze_target_order(
+                channel_curves, result_df, curve_df = analyze_order(
                     order_value=order_value,
+                    order_label=order_info["label"],
+                    harmonic_label=order_info["harmonic"],
                     time=time,
                     rpm=rpm,
                     channels=channels,
@@ -600,18 +748,21 @@ if st.button("Run Order Analysis", type="primary"):
                     order_width=order_width,
                     rpm_step=rpm_step,
                     cal_factor=cal_factor,
-                    target_rpm=target_rpm,
-                    target_amp=target_amp
+                    target_rpm=order_info["target_rpm"],
+                    target_amp=order_info["target_amp"]
                 )
 
                 curves_by_order[order_value] = channel_curves
                 results_by_order[order_value] = result_df
                 raw_curves_by_order[order_value] = curve_df
+                order_labels[order_value] = order_info["label"]
 
             overall_status = "PASS"
 
             for result_df in results_by_order.values():
-                if not (result_df["Status"] == "PASS").all():
+                target_rows = result_df[result_df["Status"] != "INFO"]
+
+                if len(target_rows) > 0 and not (target_rows["Status"] == "PASS").all():
                     overall_status = "FAIL"
 
             st.subheader("Overall Assessment")
@@ -623,9 +774,10 @@ if st.button("Run Order Analysis", type="primary"):
 
             vehicle_info = {
                 "VIN": vin_number,
+                "Analysis Type": analysis_type,
                 "Fuel Type": fuel_type,
-                "Axle Type": axle_type,
-                "Target Orders": "10, 20",
+                "Vehicle Config": vehicle_config,
+                "Target Orders": ", ".join([str(o) for o in ANALYSIS_ORDERS.keys()]),
                 "Order Width": order_width,
                 "RPM Step": rpm_step,
                 "Samples per Rev": samples_per_rev,
@@ -639,91 +791,163 @@ if st.button("Run Order Analysis", type="primary"):
             excel_report = make_excel_report(
                 vehicle_info,
                 results_by_order,
-                raw_curves_by_order
+                raw_curves_by_order,
+                order_labels
             )
 
             st.download_button(
                 label="📊 Download Excel Report",
                 data=excel_report,
-                file_name=f"{vin_number}_order_analysis_report.xlsx",
+                file_name=f"{vin_number}_{analysis_type.replace(' ', '_')}_report.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True
             )
 
-            tab1, tab2, tab3, tab4 = st.tabs(
-                [
-                    "10th Order Target Comparison",
-                    "20th Order Target Comparison",
-                    "Order Map",
-                    "Raw Results"
-                ]
-            )
+            if analysis_type == "Axle Whine Order Analysis":
+                tab1, tab2, tab3, tab4 = st.tabs(
+                    [
+                        "10th Order Target Comparison",
+                        "20th Order Target Comparison",
+                        "Order Map / Waterfall",
+                        "Raw Results"
+                    ]
+                )
 
-            for tab, order_value in zip([tab1, tab2], TARGET_ORDERS):
+                result_tabs = [tab1, tab2]
 
-                with tab:
-                    result_df = results_by_order[order_value]
-                    channel_curves = curves_by_order[order_value]
+                for tab, order_value in zip(result_tabs, ANALYSIS_ORDERS.keys()):
 
-                    order_status = (
-                        "PASS"
-                        if (result_df["Status"] == "PASS").all()
-                        else "FAIL"
-                    )
+                    with tab:
+                        order_info = ANALYSIS_ORDERS[order_value]
+                        result_df = results_by_order[order_value]
+                        channel_curves = curves_by_order[order_value]
 
-                    st.subheader(f"{int(order_value)}th Order Result Summary")
+                        order_status = (
+                            "PASS"
+                            if (result_df["Status"] == "PASS").all()
+                            else "FAIL"
+                        )
 
-                    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+                        st.subheader(f"{order_info['label']} Result Summary")
 
-                    kpi1.metric(
-                        "Peak ChA",
-                        f"{result_df.loc[result_df['Channel'] == 'ChA', 'Peak Amplitude [m/s²]'].iloc[0]:.2f} m/s²"
-                    )
+                        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
 
-                    kpi2.metric(
-                        "Peak ChB",
-                        f"{result_df.loc[result_df['Channel'] == 'ChB', 'Peak Amplitude [m/s²]'].iloc[0]:.2f} m/s²"
-                    )
+                        kpi1.metric(
+                            "Peak ChA",
+                            f"{result_df.loc[result_df['Channel'] == 'ChA', 'Peak Amplitude [m/s²]'].iloc[0]:.2f} m/s²"
+                        )
 
-                    kpi3.metric(
-                        "Peak ChC",
-                        f"{result_df.loc[result_df['Channel'] == 'ChC', 'Peak Amplitude [m/s²]'].iloc[0]:.2f} m/s²"
-                    )
+                        kpi2.metric(
+                            "Peak ChB",
+                            f"{result_df.loc[result_df['Channel'] == 'ChB', 'Peak Amplitude [m/s²]'].iloc[0]:.2f} m/s²"
+                        )
 
-                    kpi4.metric(
-                        f"{int(order_value)}th Order Assessment",
-                        order_status
-                    )
+                        kpi3.metric(
+                            "Peak ChC",
+                            f"{result_df.loc[result_df['Channel'] == 'ChC', 'Peak Amplitude [m/s²]'].iloc[0]:.2f} m/s²"
+                        )
 
-                    st.subheader(f"{int(order_value)}th Order vs RPM with Target Curve")
+                        kpi4.metric(
+                            f"{order_info['label']} Assessment",
+                            order_status
+                        )
 
-                    fig_cmp = plot_order_comparison(
-                        order_value=order_value,
-                        channel_curves=channel_curves,
-                        target_rpm=target_rpm,
-                        target_amp=target_amp,
-                        vin_number=vin_number,
-                        fuel_type=fuel_type,
-                        axle_type=axle_type
-                    )
+                        fig_cmp = plot_order_comparison(
+                            order_label=order_info["label"],
+                            channel_curves=channel_curves,
+                            target_rpm=order_info["target_rpm"],
+                            target_amp=order_info["target_amp"],
+                            vin_number=vin_number,
+                            analysis_type=analysis_type,
+                            vehicle_config=vehicle_config
+                        )
 
-                    st.pyplot(fig_cmp)
+                        st.pyplot(fig_cmp)
 
-                    st.subheader(f"{int(order_value)}th Order Target Compliance")
+                        st.subheader(f"{order_info['label']} Target Compliance")
 
-                    st.dataframe(
-                        result_df,
-                        use_container_width=True
-                    )
+                        st.dataframe(
+                            result_df,
+                            use_container_width=True
+                        )
 
-                    if order_status == "PASS":
-                        st.success(f"{int(order_value)}th Order Assessment: PASS")
-                    else:
-                        st.error(f"{int(order_value)}th Order Assessment: FAIL")
+                order_map_tab = tab3
+                raw_tab = tab4
 
-            with tab3:
+            else:
+                tab1, tab2, tab3 = st.tabs(
+                    [
+                        "Gear Mesh Order Results",
+                        "Order Map / Waterfall",
+                        "Raw Results"
+                    ]
+                )
 
-                st.subheader(f"Order Map - {selected_channel}")
+                with tab1:
+                    for order_value, order_info in ANALYSIS_ORDERS.items():
+                        result_df = results_by_order[order_value]
+                        channel_curves = curves_by_order[order_value]
+
+                        if (result_df["Status"] == "INFO").all():
+                            order_status = "INFO"
+                        else:
+                            order_status = (
+                                "PASS"
+                                if (result_df[result_df["Status"] != "INFO"]["Status"] == "PASS").all()
+                                else "FAIL"
+                            )
+
+                        st.subheader(f"{order_info['label']} Result Summary")
+
+                        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+
+                        kpi1.metric(
+                            "Peak ChA",
+                            f"{result_df.loc[result_df['Channel'] == 'ChA', 'Peak Amplitude [m/s²]'].iloc[0]:.2f} m/s²"
+                        )
+
+                        kpi2.metric(
+                            "Peak ChB",
+                            f"{result_df.loc[result_df['Channel'] == 'ChB', 'Peak Amplitude [m/s²]'].iloc[0]:.2f} m/s²"
+                        )
+
+                        kpi3.metric(
+                            "Peak ChC",
+                            f"{result_df.loc[result_df['Channel'] == 'ChC', 'Peak Amplitude [m/s²]'].iloc[0]:.2f} m/s²"
+                        )
+
+                        kpi4.metric(
+                            "Assessment",
+                            order_status
+                        )
+
+                        fig_cmp = plot_order_comparison(
+                            order_label=order_info["label"],
+                            channel_curves=channel_curves,
+                            target_rpm=order_info["target_rpm"],
+                            target_amp=order_info["target_amp"],
+                            vin_number=vin_number,
+                            analysis_type=analysis_type,
+                            vehicle_config=vehicle_config
+                        )
+
+                        st.pyplot(fig_cmp)
+
+                        st.subheader(f"{order_info['label']} Compliance / Severity Table")
+
+                        st.dataframe(
+                            result_df,
+                            use_container_width=True
+                        )
+
+                        st.markdown("---")
+
+                order_map_tab = tab2
+                raw_tab = tab3
+
+            with order_map_tab:
+
+                st.subheader(f"Order Map / Waterfall - {selected_channel}")
 
                 sig = channels[selected_channel]
 
@@ -770,26 +994,20 @@ if st.button("Run Order Analysis", type="primary"):
                 ax.set_xlabel("Order")
                 ax.set_ylabel("RPM")
                 ax.set_title(
-                    f"Order Map - {selected_channel} | VIN: {vin_number} | {fuel_type} | {axle_type}"
+                    f"Order Map / Waterfall - {selected_channel} | VIN: {vin_number} | {analysis_type}"
                 )
 
                 st.pyplot(fig)
 
-            with tab4:
+            with raw_tab:
 
-                st.subheader("10th Order Raw Curve Data")
+                for order_value, curve_df in raw_curves_by_order.items():
+                    st.subheader(f"{order_labels[order_value]} Raw Curve Data")
 
-                st.dataframe(
-                    raw_curves_by_order[10.0],
-                    use_container_width=True
-                )
-
-                st.subheader("20th Order Raw Curve Data")
-
-                st.dataframe(
-                    raw_curves_by_order[20.0],
-                    use_container_width=True
-                )
+                    st.dataframe(
+                        curve_df,
+                        use_container_width=True
+                    )
 
     except Exception:
         st.error("Uygulama çalışırken hata oluştu")
