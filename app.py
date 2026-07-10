@@ -2399,7 +2399,7 @@ if st.button(
             ),
         }
 
-        # ---------------------------------------------------------------------
+              # ---------------------------------------------------------------------
         # Excel report
         # ---------------------------------------------------------------------
 
@@ -2417,12 +2417,22 @@ if st.button(
                 order_definitions
             ),
         )
-st.session_state["excel_report"] = excel_report
-st.session_state["vehicle_information"] = vehicle_information
-st.session_state["vin_result"] = vin_number
+
         # ---------------------------------------------------------------------
         # Store results in Streamlit session state
         # ---------------------------------------------------------------------
+
+        st.session_state[
+            "excel_report"
+        ] = excel_report
+
+        st.session_state[
+            "vehicle_information"
+        ] = vehicle_information
+
+        st.session_state[
+            "vin_result"
+        ] = vin_number
 
         st.session_state[
             "analysis_completed"
