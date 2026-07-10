@@ -1,16 +1,11 @@
-import streamlit as st
-import tempfile
-import os
-import traceback
-import re
-from io import BytesIO
-
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-
-from openpyxl.styles import Font, PatternFill
-from openpyxl.drawing.image import Image as XLImage
+from transfer_case_analysis import (
+    read_xlsx_numeric,
+    angular_resample,
+    order_map,
+    extract_order_vs_rpm,
+    analyze_transfer_case_orders,
+    TRANSFER_CASE_ORDERS
+)
 
 
 st.set_page_config(
