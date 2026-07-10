@@ -1,9 +1,11 @@
 import zipfile
 import xml.etree.ElementTree as ET
 import re
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
 from scipy.signal import savgol_filter
+
 
 NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 
@@ -14,103 +16,233 @@ def load_shared_strings(z):
     if "xl/sharedStrings.xml" not in z.namelist():
         return strings
 
-    for event, elem in ET.iterparse(z.open("xl/sharedStrings.xml"), events=("end",)):
-        if elem.tag == NS + "si":
-            texts = []
-            for t in elem.iter(NS + "t"):
-                texts.append(t.text or "")
-            strings.append("".join(texts))
-            elem.clear()
+    with z.open("xl/sharedStrings.xml") as stream:
+        for _, elem in ET.iterparse(stream, events=("end",)):
+            if elem.tag == NS + "si":
+                texts = []
+
+                for text_element in elem.iter(NS + "t"):
+                    texts.append(text_element.text or "")
+
+                strings.append("".join(texts))
+                elem.clear()
 
     return strings
 
 
 def col_index(cell_ref):
-    letters = re.match(r"([A-Z]+)", cell_ref).group(1)
+    match = re.match(r"([A-Z]+)", cell_ref)
 
-    n = 0
-    for ch in letters:
-        n = n * 26 + ord(ch) - 64
+    if match is None:
+        raise ValueError(
+            f"Invalid Excel cell reference: {cell_ref}"
+        )
 
-    return n - 1
+    letters = match.group(1)
+
+    index = 0
+
+    for character in letters:
+        index = index * 26 + ord(character) - 64
+
+    return index - 1
 
 
 def read_xlsx_numeric(path):
     with zipfile.ZipFile(path) as z:
         shared = load_shared_strings(z)
 
+        sheet_path = "xl/worksheets/sheet1.xml"
+
+        if sheet_path not in z.namelist():
+            raise ValueError(
+                "The Excel file does not contain sheet1.xml."
+            )
+
         nrows = 0
 
-        with z.open("xl/worksheets/sheet1.xml") as f:
-            for ev, elem in ET.iterparse(f, events=("start",)):
+        with z.open(sheet_path) as stream:
+            for _, elem in ET.iterparse(
+                stream,
+                events=("start",)
+            ):
                 if elem.tag == NS + "dimension":
-                    ref = elem.attrib.get("ref", "")
-                    m = re.search(r":([A-Z]+)(\d+)", ref)
-                    nrows = int(m.group(2)) - 1 if m else 0
+                    reference = elem.attrib.get("ref", "")
+
+                    match = re.search(
+                        r":([A-Z]+)(\d+)",
+                        reference
+                    )
+
+                    if match:
+                        nrows = max(
+                            0,
+                            int(match.group(2)) - 1
+                        )
+
                     break
 
-        arr = np.empty((nrows, 5), dtype=np.float64)
-        headers = [None] * 5
-        ri = -1
+        if nrows <= 0:
+            raise ValueError(
+                "The Excel worksheet does not contain numeric data rows."
+            )
 
-        with z.open("xl/worksheets/sheet1.xml") as f:
-            for ev, row in ET.iterparse(f, events=("end",)):
+        data = np.empty(
+            (nrows, 5),
+            dtype=np.float64
+        )
+
+        data[:] = np.nan
+
+        headers = [None] * 5
+        row_index = -1
+
+        with z.open(sheet_path) as stream:
+            for _, row in ET.iterparse(
+                stream,
+                events=("end",)
+            ):
                 if row.tag != NS + "row":
                     continue
 
-                rnum = int(row.attrib.get("r", "0"))
-                vals = [np.nan] * 5
+                row_number = int(
+                    row.attrib.get("r", "0")
+                )
 
-                for c in row.findall(NS + "c"):
-                    ref = c.attrib.get("r", "")
-                    j = col_index(ref)
+                values = [np.nan] * 5
 
-                    if j >= 5:
+                for cell in row.findall(NS + "c"):
+                    reference = cell.attrib.get("r", "")
+
+                    try:
+                        column_index = col_index(reference)
+                    except ValueError:
                         continue
 
-                    typ = c.attrib.get("t")
-                    v = c.find(NS + "v")
-
-                    if v is None:
+                    if column_index >= 5:
                         continue
 
-                    txt = v.text
+                    cell_type = cell.attrib.get("t")
+                    value_element = cell.find(NS + "v")
 
-                    if rnum == 1:
-                        headers[j] = shared[int(txt)] if typ == "s" else txt
+                    if value_element is None:
+                        continue
+
+                    text_value = value_element.text
+
+                    if text_value is None:
+                        continue
+
+                    if row_number == 1:
+                        if cell_type == "s":
+                            shared_index = int(text_value)
+
+                            if 0 <= shared_index < len(shared):
+                                headers[column_index] = shared[shared_index]
+                            else:
+                                headers[column_index] = text_value
+                        else:
+                            headers[column_index] = text_value
                     else:
-                        vals[j] = float(txt)
+                        try:
+                            values[column_index] = float(text_value)
+                        except (TypeError, ValueError):
+                            values[column_index] = np.nan
 
-                if rnum > 1:
-                    ri += 1
-                    arr[ri, :] = vals
+                if row_number > 1:
+                    row_index += 1
+
+                    if row_index >= data.shape[0]:
+                        data = np.vstack(
+                            [
+                                data,
+                                np.full(
+                                    (10000, 5),
+                                    np.nan,
+                                    dtype=np.float64
+                                )
+                            ]
+                        )
+
+                    data[row_index, :] = values
 
                 row.clear()
 
-        return headers, arr[:ri + 1]
+        if row_index < 0:
+            raise ValueError(
+                "No numeric data rows were found in the Excel worksheet."
+            )
+
+        return headers, data[:row_index + 1]
 
 
-def angular_resample(time, rpm, signal, samples_per_rev=512):
-    mask = (
+def angular_resample(
+    time,
+    rpm,
+    signal,
+    samples_per_rev=512
+):
+    time = np.asarray(
+        time,
+        dtype=float
+    )
+
+    rpm = np.asarray(
+        rpm,
+        dtype=float
+    )
+
+    signal = np.asarray(
+        signal,
+        dtype=float
+    )
+
+    if not (
+        len(time) == len(rpm) == len(signal)
+    ):
+        raise ValueError(
+            "Time, RPM and signal arrays must have the same length."
+        )
+
+    if samples_per_rev <= 0:
+        raise ValueError(
+            "samples_per_rev must be greater than zero."
+        )
+
+    valid_mask = (
         np.isfinite(time)
         & np.isfinite(rpm)
         & np.isfinite(signal)
         & (rpm > 0)
     )
 
-    time = time[mask]
-    rpm = rpm[mask]
-    signal = signal[mask]
+    time = time[valid_mask]
+    rpm = rpm[valid_mask]
+    signal = signal[valid_mask]
 
-    # Time sıralı değilse sıralıyoruz, satır silmiyoruz.
-    sort_idx = np.argsort(time)
-    time = time[sort_idx]
-    rpm = rpm[sort_idx]
-    signal = signal[sort_idx]
+    if len(time) < 3:
+        raise ValueError(
+            "Not enough valid samples are available for angular resampling."
+        )
 
-    dt = np.diff(time, prepend=time[0])
+    # Stable sorting preserves the original order of equal-time samples.
+    sort_indices = np.argsort(
+        time,
+        kind="stable"
+    )
 
-    positive_dt = dt[dt > 0]
+    time = time[sort_indices]
+    rpm = rpm[sort_indices]
+    signal = signal[sort_indices]
+
+    dt = np.diff(
+        time,
+        prepend=time[0]
+    )
+
+    positive_dt = dt[
+        np.isfinite(dt) & (dt > 0)
+    ]
 
     if len(positive_dt) == 0:
         raise ValueError(
@@ -118,35 +250,95 @@ def angular_resample(time, rpm, signal, samples_per_rev=512):
             "Please check the time column precision."
         )
 
-    median_dt = np.median(positive_dt)
+    median_dt = float(
+        np.median(positive_dt)
+    )
 
-    # Pico CSV export'ta düşük decimal precision nedeniyle dt=0 oluşabilir.
-    # Satır silmiyoruz; dt<=0 noktalarını median pozitif dt ile dolduruyoruz.
+    if not np.isfinite(median_dt) or median_dt <= 0:
+        raise ValueError(
+            "A valid median time step could not be calculated."
+        )
+
+    # Pico CSV files may contain repeated time values because of
+    # decimal precision. No data rows are deleted. Zero or negative
+    # time increments are replaced with the median positive time step.
     dt = np.where(
-        dt <= 0,
-        median_dt,
-        dt
+        np.isfinite(dt) & (dt > 0),
+        dt,
+        median_dt
     )
 
     dt[0] = median_dt
 
-    omega = 2 * np.pi * rpm / 60.0
-    theta = np.cumsum(omega * dt)
+    angular_velocity = (
+        2.0
+        * np.pi
+        * rpm
+        / 60.0
+    )
 
-    keep = np.r_[True, np.diff(theta) > 0]
+    theta = np.cumsum(
+        angular_velocity * dt
+    )
 
-    theta = theta[keep]
-    signal = signal[keep]
-    rpm = rpm[keep]
+    if len(theta) < 2:
+        raise ValueError(
+            "Angular position could not be calculated."
+        )
 
-    dtheta = 2 * np.pi / samples_per_rev
+    increasing_mask = np.r_[
+        True,
+        np.diff(theta) > 0
+    ]
 
-    theta_u = np.arange(theta[0], theta[-1], dtheta)
+    theta = theta[increasing_mask]
+    signal = signal[increasing_mask]
+    rpm = rpm[increasing_mask]
 
-    x_u = np.interp(theta_u, theta, signal)
-    rpm_u = np.interp(theta_u, theta, rpm)
+    if len(theta) < 2:
+        raise ValueError(
+            "Angular position does not contain enough increasing samples."
+        )
 
-    return theta_u, x_u, rpm_u
+    angular_step = (
+        2.0
+        * np.pi
+        / samples_per_rev
+    )
+
+    if theta[-1] <= theta[0]:
+        raise ValueError(
+            "The available angular range is insufficient for resampling."
+        )
+
+    theta_uniform = np.arange(
+        theta[0],
+        theta[-1],
+        angular_step
+    )
+
+    if len(theta_uniform) < 2:
+        raise ValueError(
+            "Angular resampling produced too few samples."
+        )
+
+    signal_uniform = np.interp(
+        theta_uniform,
+        theta,
+        signal
+    )
+
+    rpm_uniform = np.interp(
+        theta_uniform,
+        theta,
+        rpm
+    )
+
+    return (
+        theta_uniform,
+        signal_uniform,
+        rpm_uniform
+    )
 
 
 def order_map(
@@ -158,46 +350,268 @@ def order_map(
     overlap=0.75,
     max_order=30
 ):
-    nper = int(samples_per_rev * revs_per_block)
-    hop = max(1, int(nper * (1 - overlap)))
-
-    win = np.hanning(nper)
-    win_sum = np.sum(win)
-
-    orders = np.fft.rfftfreq(
-        nper,
-        d=1 / samples_per_rev
+    theta_u = np.asarray(
+        theta_u,
+        dtype=float
     )
 
-    keep = orders <= max_order
-    orders = orders[keep]
+    x_u = np.asarray(
+        x_u,
+        dtype=float
+    )
 
-    specs = []
-    rpms = []
+    rpm_u = np.asarray(
+        rpm_u,
+        dtype=float
+    )
 
-    for start in range(0, len(x_u) - nper + 1, hop):
-        block = x_u[start:start + nper]
-        block = block - np.mean(block)
-
-        X = np.fft.rfft(block * win)
-
-        amp = (
-            np.sqrt(2)
-            * np.abs(X)
-            / win_sum
+    if not (
+        len(theta_u)
+        == len(x_u)
+        == len(rpm_u)
+    ):
+        raise ValueError(
+            "theta_u, x_u and rpm_u must have the same length."
         )
 
-        specs.append(amp[keep])
-        rpms.append(np.mean(rpm_u[start:start + nper]))
+    if samples_per_rev <= 0:
+        raise ValueError(
+            "samples_per_rev must be greater than zero."
+        )
 
-    return orders, np.asarray(rpms), np.asarray(specs)
+    if revs_per_block <= 0:
+        raise ValueError(
+            "revs_per_block must be greater than zero."
+        )
+
+    if not 0 <= overlap < 1:
+        raise ValueError(
+            "overlap must be greater than or equal to 0 "
+            "and smaller than 1."
+        )
+
+    if max_order <= 0:
+        raise ValueError(
+            "max_order must be greater than zero."
+        )
+
+    if len(x_u) == 0:
+        raise ValueError(
+            "Angular resampling produced no samples."
+        )
+
+    available_revolutions = (
+        len(x_u)
+        / float(samples_per_rev)
+    )
+
+    available_complete_revolutions = int(
+        np.floor(available_revolutions)
+    )
+
+    effective_revs_per_block = min(
+        int(revs_per_block),
+        available_complete_revolutions
+    )
+
+    if effective_revs_per_block < 2:
+        raise ValueError(
+            "Insufficient measurement duration for order analysis. "
+            f"Available revolutions: {available_revolutions:.2f}. "
+            "At least 2 complete revolutions are required."
+        )
+
+    samples_per_block = int(
+        samples_per_rev
+        * effective_revs_per_block
+    )
+
+    hop_size = max(
+        1,
+        int(
+            round(
+                samples_per_block
+                * (1.0 - overlap)
+            )
+        )
+    )
+
+    if len(x_u) < samples_per_block:
+        raise ValueError(
+            "Angular-resampled signal is shorter than one FFT block. "
+            f"Signal samples: {len(x_u)}, "
+            f"required samples: {samples_per_block}."
+        )
+
+    window = np.hanning(
+        samples_per_block
+    )
+
+    window_sum = float(
+        np.sum(window)
+    )
+
+    if not np.isfinite(window_sum) or window_sum <= 0:
+        raise ValueError(
+            "Invalid FFT window scaling."
+        )
+
+    complete_order_axis = np.fft.rfftfreq(
+        samples_per_block,
+        d=1.0 / samples_per_rev
+    )
+
+    order_mask = (
+        complete_order_axis <= max_order
+    )
+
+    orders = complete_order_axis[
+        order_mask
+    ]
+
+    if len(orders) == 0:
+        raise ValueError(
+            "No order bins are available for the selected max_order."
+        )
+
+    spectra = []
+    block_rpms = []
+
+    last_start = (
+        len(x_u)
+        - samples_per_block
+    )
+
+    for start in range(
+        0,
+        last_start + 1,
+        hop_size
+    ):
+        stop = start + samples_per_block
+
+        signal_block = x_u[start:stop]
+        rpm_block = rpm_u[start:stop]
+
+        if len(signal_block) != samples_per_block:
+            continue
+
+        if len(rpm_block) != samples_per_block:
+            continue
+
+        if not np.all(
+            np.isfinite(signal_block)
+        ):
+            continue
+
+        if not np.all(
+            np.isfinite(rpm_block)
+        ):
+            continue
+
+        signal_block = (
+            signal_block
+            - np.mean(signal_block)
+        )
+
+        fft_values = np.fft.rfft(
+            signal_block * window
+        )
+
+        # Artemis-compatible RMS amplitude scaling.
+        amplitude = (
+            np.sqrt(2.0)
+            * np.abs(fft_values)
+            / window_sum
+        )
+
+        selected_amplitude = amplitude[
+            order_mask
+        ]
+
+        spectra.append(
+            selected_amplitude
+        )
+
+        block_rpms.append(
+            float(
+                np.mean(rpm_block)
+            )
+        )
+
+    if len(spectra) == 0:
+        raise ValueError(
+            "No valid FFT blocks could be generated. "
+            f"Angular samples: {len(x_u)}, "
+            f"block size: {samples_per_block}, "
+            f"available revolutions: {available_revolutions:.2f}."
+        )
+
+    # vstack guarantees that the spectrum is always two-dimensional.
+    spectrum_array = np.vstack(
+        spectra
+    ).astype(
+        np.float64,
+        copy=False
+    )
+
+    rpm_array = np.asarray(
+        block_rpms,
+        dtype=np.float64
+    )
+
+    if spectrum_array.ndim != 2:
+        raise ValueError(
+            "Calculated order spectrum is not two-dimensional."
+        )
+
+    if spectrum_array.shape[0] != len(rpm_array):
+        raise ValueError(
+            "The number of FFT blocks does not match the RPM vector."
+        )
+
+    return (
+        orders,
+        rpm_array,
+        spectrum_array
+    )
 
 
-def smooth_curve(y, window_length=9, polyorder=2):
-    y = np.asarray(y)
+def smooth_curve(
+    y,
+    window_length=9,
+    polyorder=2
+):
+    y = np.asarray(
+        y,
+        dtype=float
+    )
 
-    if len(y) < window_length:
+    if len(y) < 5:
         return y
+
+    valid_mask = np.isfinite(y)
+
+    if not np.all(valid_mask):
+        valid_indices = np.flatnonzero(
+            valid_mask
+        )
+
+        if len(valid_indices) < 2:
+            return y
+
+        y = np.interp(
+            np.arange(len(y)),
+            valid_indices,
+            y[valid_indices]
+        )
+
+    window_length = int(
+        window_length
+    )
+
+    polyorder = int(
+        polyorder
+    )
 
     if window_length % 2 == 0:
         window_length += 1
@@ -208,7 +622,12 @@ def smooth_curve(y, window_length=9, polyorder=2):
     if window_length % 2 == 0:
         window_length -= 1
 
-    if window_length < 5:
+    minimum_window = polyorder + 2
+
+    if minimum_window % 2 == 0:
+        minimum_window += 1
+
+    if window_length < minimum_window:
         return y
 
     return savgol_filter(
@@ -218,42 +637,114 @@ def smooth_curve(y, window_length=9, polyorder=2):
     )
 
 
-def resample_to_rpm_step(rpm, amp, rpm_step=10):
-    rpm = np.asarray(rpm)
-    amp = np.asarray(amp)
+def resample_to_rpm_step(
+    rpm,
+    amplitude,
+    rpm_step=10
+):
+    rpm = np.asarray(
+        rpm,
+        dtype=float
+    )
 
-    mask = np.isfinite(rpm) & np.isfinite(amp)
+    amplitude = np.asarray(
+        amplitude,
+        dtype=float
+    )
 
-    rpm = rpm[mask]
-    amp = amp[mask]
+    if rpm_step <= 0:
+        raise ValueError(
+            "rpm_step must be greater than zero."
+        )
+
+    valid_mask = (
+        np.isfinite(rpm)
+        & np.isfinite(amplitude)
+    )
+
+    rpm = rpm[valid_mask]
+    amplitude = amplitude[valid_mask]
 
     if len(rpm) < 2:
-        return rpm, amp
+        return rpm, amplitude
 
-    sort_idx = np.argsort(rpm)
+    sort_indices = np.argsort(
+        rpm,
+        kind="stable"
+    )
 
-    rpm = rpm[sort_idx]
-    amp = amp[sort_idx]
+    rpm = rpm[sort_indices]
+    amplitude = amplitude[sort_indices]
 
-    rpm_min = np.ceil(rpm[0] / rpm_step) * rpm_step
-    rpm_max = np.floor(rpm[-1] / rpm_step) * rpm_step
+    # Average amplitude values when multiple FFT blocks have
+    # exactly the same RPM value.
+    unique_rpm, inverse_indices = np.unique(
+        rpm,
+        return_inverse=True
+    )
 
-    if rpm_max <= rpm_min:
-        return rpm, amp
+    if len(unique_rpm) != len(rpm):
+        amplitude_sum = np.zeros(
+            len(unique_rpm),
+            dtype=float
+        )
+
+        amplitude_count = np.zeros(
+            len(unique_rpm),
+            dtype=float
+        )
+
+        np.add.at(
+            amplitude_sum,
+            inverse_indices,
+            amplitude
+        )
+
+        np.add.at(
+            amplitude_count,
+            inverse_indices,
+            1.0
+        )
+
+        rpm = unique_rpm
+
+        amplitude = (
+            amplitude_sum
+            / np.maximum(
+                amplitude_count,
+                1.0
+            )
+        )
+
+    if len(rpm) < 2:
+        return rpm, amplitude
+
+    rpm_minimum = (
+        np.ceil(rpm[0] / rpm_step)
+        * rpm_step
+    )
+
+    rpm_maximum = (
+        np.floor(rpm[-1] / rpm_step)
+        * rpm_step
+    )
+
+    if rpm_maximum <= rpm_minimum:
+        return rpm, amplitude
 
     rpm_grid = np.arange(
-        rpm_min,
-        rpm_max + rpm_step,
+        rpm_minimum,
+        rpm_maximum + rpm_step,
         rpm_step
     )
 
-    amp_grid = np.interp(
+    amplitude_grid = np.interp(
         rpm_grid,
         rpm,
-        amp
+        amplitude
     )
 
-    return rpm_grid, amp_grid
+    return rpm_grid, amplitude_grid
 
 
 def plot_order_map(
@@ -263,42 +754,102 @@ def plot_order_map(
     channel_name="Channel",
     db_reference=1.0
 ):
-    idx = np.argsort(rpms)
-
-    r = rpms[idx]
-    s = spec[idx]
-
-    db = 20 * np.log10(
-        np.maximum(s, 1e-12) / db_reference
+    orders = np.asarray(
+        orders,
+        dtype=float
     )
 
-    fig, ax = plt.subplots(figsize=(11, 7))
+    rpms = np.asarray(
+        rpms,
+        dtype=float
+    )
 
-    im = ax.imshow(
-        db,
+    spec = np.asarray(
+        spec,
+        dtype=float
+    )
+
+    if spec.ndim != 2:
+        raise ValueError(
+            "Order spectrum must be a two-dimensional array. "
+            f"Received shape: {spec.shape}."
+        )
+
+    if spec.shape[0] == 0 or spec.shape[1] == 0:
+        raise ValueError(
+            "Order spectrum is empty."
+        )
+
+    if spec.shape[0] != len(rpms):
+        raise ValueError(
+            "RPM vector length does not match the number of spectrum blocks."
+        )
+
+    if spec.shape[1] != len(orders):
+        raise ValueError(
+            "Order axis length does not match the spectrum columns."
+        )
+
+    if db_reference <= 0:
+        raise ValueError(
+            "db_reference must be greater than zero."
+        )
+
+    sort_indices = np.argsort(
+        rpms
+    )
+
+    sorted_rpms = rpms[
+        sort_indices
+    ]
+
+    sorted_spectrum = spec[
+        sort_indices,
+        :
+    ]
+
+    spectrum_db = (
+        20.0
+        * np.log10(
+            np.maximum(
+                sorted_spectrum,
+                1e-12
+            )
+            / db_reference
+        )
+    )
+
+    figure, axis = plt.subplots(
+        figsize=(11, 7)
+    )
+
+    image = axis.imshow(
+        spectrum_db,
         aspect="auto",
         origin="lower",
         extent=[
             orders[0],
             orders[-1],
-            r[0],
-            r[-1]
+            sorted_rpms[0],
+            sorted_rpms[-1]
         ],
         interpolation="nearest",
         cmap="jet"
     )
 
-    fig.colorbar(
-        im,
-        ax=ax,
+    figure.colorbar(
+        image,
+        ax=axis,
         label="Amplitude [dB re 1 m/s²]"
     )
 
-    ax.set_xlabel("Order")
-    ax.set_ylabel("RPM")
-    ax.set_title(f"Order Map - {channel_name}")
+    axis.set_xlabel("Order")
+    axis.set_ylabel("RPM")
+    axis.set_title(
+        f"Order Map - {channel_name}"
+    )
 
-    return fig
+    return figure
 
 
 def extract_order_vs_rpm(
@@ -310,41 +861,155 @@ def extract_order_vs_rpm(
     rpm_step=10,
     smooth=True
 ):
-    band = (
-        (orders >= target_order - width / 2)
-        &
-        (orders <= target_order + width / 2)
+    orders = np.asarray(
+        orders,
+        dtype=float
     )
 
-    if not np.any(band):
-        order_idx = np.argmin(
-            np.abs(orders - target_order)
+    rpms = np.asarray(
+        rpms,
+        dtype=float
+    )
+
+    spec = np.asarray(
+        spec,
+        dtype=float
+    )
+
+    if spec.ndim != 2:
+        raise ValueError(
+            "Order spectrum must be a two-dimensional array. "
+            f"Received shape: {spec.shape}."
         )
-        amp = spec[:, order_idx]
+
+    if spec.shape[0] == 0 or spec.shape[1] == 0:
+        raise ValueError(
+            "Order spectrum is empty."
+        )
+
+    if len(orders) == 0:
+        raise ValueError(
+            "Order axis is empty."
+        )
+
+    if len(rpms) == 0:
+        raise ValueError(
+            "RPM vector is empty."
+        )
+
+    if spec.shape[0] != len(rpms):
+        raise ValueError(
+            "RPM vector length does not match the number of spectrum blocks."
+        )
+
+    if spec.shape[1] != len(orders):
+        raise ValueError(
+            "Order axis length does not match the spectrum columns."
+        )
+
+    if target_order < orders[0]:
+        raise ValueError(
+            f"Target order {target_order:.2f} is below the calculated "
+            f"minimum order {orders[0]:.2f}."
+        )
+
+    if target_order > orders[-1]:
+        raise ValueError(
+            f"Target order {target_order:.2f} is above the calculated "
+            f"maximum order {orders[-1]:.2f}. Increase Max order."
+        )
+
+    if width <= 0:
+        raise ValueError(
+            "Order width must be greater than zero."
+        )
+
+    band_mask = (
+        (
+            orders
+            >= target_order - width / 2.0
+        )
+        &
+        (
+            orders
+            <= target_order + width / 2.0
+        )
+    )
+
+    if not np.any(band_mask):
+        nearest_order_index = int(
+            np.argmin(
+                np.abs(
+                    orders - target_order
+                )
+            )
+        )
+
+        amplitude = spec[
+            :,
+            nearest_order_index
+        ]
     else:
-        amp = np.sqrt(
+        # RSS integration across the selected order band.
+        amplitude = np.sqrt(
             np.sum(
-                spec[:, band] ** 2,
+                spec[:, band_mask] ** 2,
                 axis=1
             )
         )
 
-    sort_idx = np.argsort(rpms)
+    valid_mask = (
+        np.isfinite(rpms)
+        & np.isfinite(amplitude)
+    )
 
-    rpm_sorted = rpms[sort_idx]
-    amp_sorted = amp[sort_idx]
+    rpm_values = rpms[
+        valid_mask
+    ]
+
+    amplitude_values = amplitude[
+        valid_mask
+    ]
+
+    if len(rpm_values) < 2:
+        raise ValueError(
+            f"Not enough valid RPM blocks are available for "
+            f"order {target_order:.2f}."
+        )
+
+    sort_indices = np.argsort(
+        rpm_values,
+        kind="stable"
+    )
+
+    rpm_sorted = rpm_values[
+        sort_indices
+    ]
+
+    amplitude_sorted = amplitude_values[
+        sort_indices
+    ]
 
     if smooth:
-        amp_sorted = smooth_curve(
-            amp_sorted,
+        amplitude_sorted = smooth_curve(
+            amplitude_sorted,
             window_length=9,
             polyorder=2
         )
 
-    rpm_step_sorted, amp_step_sorted = resample_to_rpm_step(
+    rpm_resampled, amplitude_resampled = resample_to_rpm_step(
         rpm_sorted,
-        amp_sorted,
+        amplitude_sorted,
         rpm_step=rpm_step
     )
 
-    return rpm_step_sorted, amp_step_sorted
+    if len(rpm_resampled) == 0:
+        raise ValueError(
+            f"RPM resampling produced no data for order "
+            f"{target_order:.2f}."
+        )
+
+    return (
+        rpm_resampled,
+        amplitude_resampled
+    )
