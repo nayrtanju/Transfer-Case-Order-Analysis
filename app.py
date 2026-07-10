@@ -2178,7 +2178,109 @@ with st.expander(
 # =============================================================================
 # RUN ANALYSIS
 # =============================================================================
+# =============================================================================
+# SESSION STATE SAFETY
+# =============================================================================
 
+def clear_analysis_session_state() -> None:
+    """
+    Clear previously stored analysis results.
+
+    This prevents results from a previous vehicle, file or analysis
+    configuration from remaining visible after the inputs change.
+    """
+    state_keys_to_clear = [
+        "analysis_completed",
+        "analysis_type_result",
+        "time_result",
+        "rpm_result",
+        "channels_result",
+        "curves_by_order",
+        "results_by_order",
+        "raw_curves_by_order",
+        "order_definitions_result",
+        "overall_status",
+        "vehicle_configuration_result",
+        "selected_channel_result",
+        "analysis_settings_result",
+        "excel_report",
+        "vehicle_information",
+        "vin_result",
+    ]
+
+    for state_key in state_keys_to_clear:
+        if state_key in st.session_state:
+            del st.session_state[state_key]
+
+
+def build_input_signature(
+    vin_value: str,
+    selected_analysis: str,
+    selected_fuel: str,
+    selected_axle: str,
+    uploaded_measurement_file,
+    selected_max_order: float,
+    selected_order_width: float,
+    selected_map_channel: str,
+) -> tuple:
+    """
+    Build a signature representing the current analysis inputs.
+
+    If this signature changes, stored results are cleared.
+    """
+    if uploaded_measurement_file is None:
+        uploaded_file_name = None
+        uploaded_file_size = None
+
+    else:
+        uploaded_file_name = str(
+            uploaded_measurement_file.name
+        )
+
+        uploaded_file_size = int(
+            uploaded_measurement_file.size
+        )
+
+    return (
+        vin_value,
+        selected_analysis,
+        selected_fuel,
+        selected_axle,
+        uploaded_file_name,
+        uploaded_file_size,
+        float(selected_max_order),
+        float(selected_order_width),
+        selected_map_channel,
+    )
+
+
+current_input_signature = build_input_signature(
+    vin_value=vin_number,
+    selected_analysis=analysis_type,
+    selected_fuel=fuel_type,
+    selected_axle=axle_type,
+    uploaded_measurement_file=uploaded_file,
+    selected_max_order=max_order,
+    selected_order_width=order_width,
+    selected_map_channel=selected_channel,
+)
+
+
+previous_input_signature = st.session_state.get(
+    "input_signature"
+)
+
+
+if (
+    previous_input_signature is not None
+    and previous_input_signature != current_input_signature
+):
+    clear_analysis_session_state()
+
+
+st.session_state[
+    "input_signature"
+] = current_input_signature
 if st.button(
     "Run Analysis",
     type="primary",
