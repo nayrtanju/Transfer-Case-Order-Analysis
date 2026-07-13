@@ -17,13 +17,375 @@ from openpyxl.styles import Font, PatternFill
 # =============================================================================
 # STREAMLIT PAGE CONFIGURATION
 # =============================================================================
-
 st.set_page_config(
     page_title="NVH Analysis Suite",
+    page_icon="⚙️",
     layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
-st.title("NVH Analysis Suite")
+
+# =============================================================================
+# CORPORATE UI THEME
+# =============================================================================
+
+st.markdown(
+    """
+    <style>
+    /* ---------------------------------------------------------
+       GLOBAL PAGE
+    --------------------------------------------------------- */
+
+    .stApp {
+        background-color: #f4f6f8;
+    }
+
+    .block-container {
+        max-width: 1450px;
+        padding-top: 1.5rem;
+        padding-bottom: 3rem;
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+
+    html,
+    body,
+    [class*="css"] {
+        font-family:
+            Inter,
+            "Segoe UI",
+            Arial,
+            sans-serif;
+    }
+
+
+    /* ---------------------------------------------------------
+       HEADER
+    --------------------------------------------------------- */
+
+    .corporate-header {
+        background:
+            linear-gradient(
+                135deg,
+                #0b1f33 0%,
+                #123a63 55%,
+                #1768a6 100%
+            );
+
+        border-radius: 16px;
+        padding: 28px 34px;
+        margin-bottom: 24px;
+
+        box-shadow:
+            0 10px 30px rgba(11, 31, 51, 0.18);
+
+        color: white;
+    }
+
+    .corporate-header-title {
+        font-size: 2.05rem;
+        font-weight: 700;
+        line-height: 1.15;
+        margin: 0;
+        letter-spacing: -0.02em;
+    }
+
+    .corporate-header-subtitle {
+        font-size: 1rem;
+        margin-top: 8px;
+        color: rgba(255, 255, 255, 0.82);
+    }
+
+    .corporate-header-badge {
+        display: inline-block;
+        margin-top: 14px;
+        padding: 6px 12px;
+
+        border-radius: 999px;
+
+        background-color:
+            rgba(255, 255, 255, 0.14);
+
+        border:
+            1px solid
+            rgba(255, 255, 255, 0.20);
+
+        font-size: 0.82rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+    }
+
+
+    /* ---------------------------------------------------------
+       SECTION TITLES
+    --------------------------------------------------------- */
+
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #18324a;
+
+        margin-top: 1.6rem;
+        margin-bottom: 0.7rem;
+
+        padding-left: 12px;
+        border-left: 4px solid #1768a6;
+    }
+
+
+    /* ---------------------------------------------------------
+       CARD DESIGN
+    --------------------------------------------------------- */
+
+    .engineering-card {
+        background-color: #ffffff;
+
+        border:
+            1px solid
+            #dfe5ea;
+
+        border-radius: 14px;
+
+        padding: 18px 20px;
+
+        margin-bottom: 16px;
+
+        box-shadow:
+            0 4px 16px
+            rgba(17, 45, 72, 0.06);
+    }
+
+
+    /* ---------------------------------------------------------
+       INPUTS
+    --------------------------------------------------------- */
+
+    div[data-baseweb="input"] > div,
+    div[data-baseweb="select"] > div {
+        border-radius: 10px !important;
+        border-color: #cdd7df !important;
+        background-color: white !important;
+    }
+
+    div[data-baseweb="input"] > div:focus-within,
+    div[data-baseweb="select"] > div:focus-within {
+        border-color: #1768a6 !important;
+
+        box-shadow:
+            0 0 0 2px
+            rgba(23, 104, 166, 0.12) !important;
+    }
+
+
+    /* ---------------------------------------------------------
+       FILE UPLOADER
+    --------------------------------------------------------- */
+
+    section[data-testid="stFileUploaderDropzone"] {
+        background-color: #ffffff;
+
+        border:
+            1.5px dashed
+            #9eb5c7;
+
+        border-radius: 14px;
+
+        padding: 18px;
+
+        transition:
+            border-color 0.2s ease,
+            background-color 0.2s ease;
+    }
+
+    section[data-testid="stFileUploaderDropzone"]:hover {
+        border-color: #1768a6;
+        background-color: #f7fbff;
+    }
+
+
+    /* ---------------------------------------------------------
+       BUTTONS
+    --------------------------------------------------------- */
+
+    .stButton > button {
+        min-height: 48px;
+
+        border-radius: 10px;
+
+        border: none;
+
+        font-weight: 700;
+        letter-spacing: 0.01em;
+
+        background:
+            linear-gradient(
+                135deg,
+                #155d95,
+                #1d78bd
+            );
+
+        color: white;
+
+        box-shadow:
+            0 6px 16px
+            rgba(23, 104, 166, 0.24);
+
+        transition:
+            transform 0.15s ease,
+            box-shadow 0.15s ease;
+    }
+
+    .stButton > button:hover {
+        transform: translateY(-1px);
+
+        box-shadow:
+            0 9px 22px
+            rgba(23, 104, 166, 0.28);
+
+        color: white;
+    }
+
+
+    /* ---------------------------------------------------------
+       DOWNLOAD BUTTON
+    --------------------------------------------------------- */
+
+    .stDownloadButton > button {
+        min-height: 46px;
+
+        border-radius: 10px;
+
+        border:
+            1px solid
+            #1768a6;
+
+        background-color: white;
+
+        color: #1768a6;
+
+        font-weight: 700;
+    }
+
+    .stDownloadButton > button:hover {
+        background-color: #1768a6;
+        color: white;
+    }
+
+
+    /* ---------------------------------------------------------
+       METRICS
+    --------------------------------------------------------- */
+
+    div[data-testid="metric-container"] {
+        background-color: white;
+
+        border:
+            1px solid
+            #dfe5ea;
+
+        border-radius: 12px;
+
+        padding: 14px 16px;
+
+        box-shadow:
+            0 3px 12px
+            rgba(17, 45, 72, 0.05);
+    }
+
+    div[data-testid="metric-container"]
+    label {
+        color: #5c6f7f !important;
+        font-weight: 600 !important;
+    }
+
+    div[data-testid="metric-container"]
+    [data-testid="stMetricValue"] {
+        color: #17324d;
+        font-weight: 700;
+    }
+
+
+    /* ---------------------------------------------------------
+       TABS
+    --------------------------------------------------------- */
+
+    button[data-baseweb="tab"] {
+        font-weight: 600;
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: #1768a6 !important;
+    }
+
+
+    /* ---------------------------------------------------------
+       DATAFRAMES
+    --------------------------------------------------------- */
+
+    div[data-testid="stDataFrame"] {
+        border-radius: 12px;
+        overflow: hidden;
+
+        border:
+            1px solid
+            #dfe5ea;
+    }
+
+
+    /* ---------------------------------------------------------
+       STATUS MESSAGES
+    --------------------------------------------------------- */
+
+    div[data-testid="stAlert"] {
+        border-radius: 12px;
+    }
+
+
+    /* ---------------------------------------------------------
+       HIDE DEFAULT STREAMLIT CHROME
+    --------------------------------------------------------- */
+
+    #MainMenu {
+        visibility: hidden;
+    }
+
+    footer {
+        visibility: hidden;
+    }
+
+    header[data-testid="stHeader"] {
+        background-color: transparent;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+# =============================================================================
+# CORPORATE HEADER
+# =============================================================================
+
+st.markdown(
+    """
+    <div class="corporate-header">
+        <div class="corporate-header-title">
+            NVH Analysis Suite
+        </div>
+
+        <div class="corporate-header-subtitle">
+            Axle Whine and Transfer Case Gear Mesh Analysis Platform
+        </div>
+
+        <div class="corporate-header-badge">
+            Engineering Validation Environment
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 # =============================================================================
