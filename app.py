@@ -361,32 +361,24 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
-
 # =============================================================================
 # CORPORATE HEADER
 # =============================================================================
 
 st.markdown(
     """
-    <div class="corporate-header">
-        <div class="corporate-header-title">
-            NVH Analysis Suite
-        </div>
-
-        <div class="corporate-header-subtitle">
-            Axle Whine and Transfer Case Gear Mesh Analysis Platform
-        </div>
-
-        <div class="corporate-header-badge">
-            Engineering Validation Environment
-        </div>
+<div class="corporate-header">
+    <div class="corporate-header-title">NVH Analysis Suite</div>
+    <div class="corporate-header-subtitle">
+        Axle Whine and Transfer Case Gear Mesh Analysis Platform
     </div>
+    <div class="corporate-header-badge">
+        Engineering Validation Environment
+    </div>
+</div>
     """,
     unsafe_allow_html=True,
 )
-
-
 # =============================================================================
 # ANALYSIS TYPE CONSTANTS
 # =============================================================================
