@@ -2807,18 +2807,18 @@ if st.button(
         else:
             overall_status = "PASS"
 
-        # ---------------------------------------------------------------------
+               # ---------------------------------------------------------------------
         # Overall assessment display
         # ---------------------------------------------------------------------
 
-     st.markdown(
-    """
-    <div class="section-title">
-        📊 Overall Assessment
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+        st.markdown(
+            """
+            <div class="section-title">
+                📊 Overall Assessment
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
         if overall_status == "PASS":
             st.success(
@@ -2834,7 +2834,6 @@ if st.button(
             st.info(
                 "Overall Assessment: INFO"
             )
-
         # ---------------------------------------------------------------------
         # Vehicle and analysis metadata
         # ---------------------------------------------------------------------
