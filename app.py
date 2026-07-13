@@ -2275,8 +2275,13 @@ if vin_number and not vin_valid:
 # MEASUREMENT FILE
 # =============================================================================
 
-st.subheader(
-    "Measurement Data"
+st.markdown(
+    """
+    <div class="section-title">
+        📂 Measurement Data
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
 uploaded_file = st.file_uploader(
@@ -2428,10 +2433,14 @@ information_columns[3].metric(
 # ANALYSIS SETTINGS
 # =============================================================================
 
-st.subheader(
-    "Analysis Settings"
+st.markdown(
+    """
+    <div class="section-title">
+        ⚙️ Analysis Settings
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
-
 with st.expander(
     "Advanced Settings",
     expanded=False,
@@ -2802,9 +2811,14 @@ if st.button(
         # Overall assessment display
         # ---------------------------------------------------------------------
 
-        st.subheader(
-            "Overall Assessment"
-        )
+     st.markdown(
+    """
+    <div class="section-title">
+        📊 Overall Assessment
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
         if overall_status == "PASS":
             st.success(
