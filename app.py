@@ -2504,6 +2504,7 @@ if st.button(
         excel_report = make_excel_report(
             vehicle_information=(
                 vehicle_information
+                
             ),
             results_by_order=(
                 results_by_order
