@@ -2279,26 +2279,6 @@ with st.container(
             "and contain only letters and numbers."
         )
 # -----------------------------------------------------------------------------
-# VIN
-# -----------------------------------------------------------------------------
-
-with vehicle_column:
-    vin_number = st.text_input(
-        "VIN Number",
-        placeholder="Enter 17-character VIN",
-        max_chars=17,
-    ).upper().strip()
-
-
-vin_valid = bool(
-    re.fullmatch(
-        r"[A-Z0-9]{17}",
-        vin_number,
-    )
-)
-
-
-# -----------------------------------------------------------------------------
 # Analysis type
 # -----------------------------------------------------------------------------
 
