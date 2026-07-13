@@ -2168,7 +2168,660 @@ def make_excel_report(
     output.seek(
         0
     )
+# =============================================================================
+# USER INTERFACE
+# =============================================================================
 
+def render_section_title(
+    title: str,
+    subtitle: Optional[str] = None,
+) -> None:
+    """
+    Render a corporate section heading.
+    """
+    subtitle_html = ""
+
+    if subtitle:
+        subtitle_html = (
+            f'<div style="'
+            f'color:#6b7d8d;'
+            f'font-size:0.88rem;'
+            f'margin-top:3px;'
+            f'">{subtitle}</div>'
+        )
+
+    st.markdown(
+        f"""
+<div class="section-title">
+    {title}
+    {subtitle_html}
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+
+
+def clear_analysis_session_state() -> None:
+    """
+    Clear previous analysis results when an input changes.
+    """
+    state_keys_to_clear = [
+        "analysis_completed",
+        "analysis_type_result",
+        "time_result",
+        "rpm_result",
+        "channels_result",
+        "curves_by_order",
+        "results_by_order",
+        "raw_curves_by_order",
+        "order_definitions_result",
+        "overall_status",
+        "vehicle_configuration_result",
+        "selected_channel_result",
+        "analysis_settings_result",
+        "excel_report",
+        "vehicle_information",
+        "vin_result",
+    ]
+
+    for state_key in state_keys_to_clear:
+        if state_key in st.session_state:
+            del st.session_state[state_key]
+
+
+def build_input_signature(
+    vin_value: str,
+    selected_analysis: str,
+    selected_fuel: str,
+    selected_axle: str,
+    uploaded_measurement_file,
+    selected_max_order: float,
+    selected_order_width: float,
+    selected_map_channel: str,
+) -> tuple:
+    """
+    Build a signature representing the current UI inputs.
+    """
+    if uploaded_measurement_file is None:
+        file_name = None
+        file_size = None
+    else:
+        file_name = str(
+            uploaded_measurement_file.name
+        )
+
+        file_size = int(
+            uploaded_measurement_file.size
+        )
+
+    return (
+        vin_value,
+        selected_analysis,
+        selected_fuel,
+        selected_axle,
+        file_name,
+        file_size,
+        float(selected_max_order),
+        float(selected_order_width),
+        selected_map_channel,
+    )
+
+
+# =============================================================================
+# WORKFLOW INDICATOR
+# =============================================================================
+
+workflow_columns = st.columns(
+    4
+)
+
+workflow_steps = [
+    ("01", "Vehicle"),
+    ("02", "Measurement"),
+    ("03", "Configuration"),
+    ("04", "Results"),
+]
+
+for workflow_column, (
+    step_number,
+    step_name,
+) in zip(
+    workflow_columns,
+    workflow_steps,
+):
+    with workflow_column:
+        st.markdown(
+            f"""
+<div style="
+    background:#ffffff;
+    border:1px solid #dfe5ea;
+    border-radius:12px;
+    padding:12px 14px;
+    margin-bottom:12px;
+    box-shadow:0 3px 10px rgba(17,45,72,0.04);
+">
+    <div style="
+        color:#1768a6;
+        font-weight:800;
+        font-size:0.78rem;
+        letter-spacing:0.08em;
+    ">
+        STEP {step_number}
+    </div>
+    <div style="
+        color:#18324a;
+        font-weight:700;
+        margin-top:2px;
+    ">
+        {step_name}
+    </div>
+</div>
+""",
+            unsafe_allow_html=True,
+        )
+
+
+# =============================================================================
+# VEHICLE INFORMATION CARD
+# =============================================================================
+
+with st.container(
+    border=True,
+):
+    render_section_title(
+        "Vehicle Information",
+        "Identify the vehicle and select the required NVH analysis module.",
+    )
+
+    (
+        vehicle_column,
+        analysis_column,
+        option_column_1,
+        option_column_2,
+    ) = st.columns(
+        [1.15, 1.35, 1.0, 1.0]
+    )
+
+    with vehicle_column:
+        vin_number = st.text_input(
+            "VIN Number",
+            placeholder="Enter 17-character VIN",
+            max_chars=17,
+            key="ui_vin_number",
+        ).upper().strip()
+
+    vin_valid = bool(
+        re.fullmatch(
+            r"[A-Z0-9]{17}",
+            vin_number,
+        )
+    )
+
+    with analysis_column:
+        analysis_type = st.selectbox(
+            "Analysis Type",
+            [
+                ANALYSIS_AXLE,
+                ANALYSIS_TRANSFER_CASE,
+            ],
+            key="ui_analysis_type",
+            disabled=not vin_valid,
+        )
+
+    if analysis_type == ANALYSIS_AXLE:
+        with option_column_1:
+            fuel_type = st.selectbox(
+                "Fuel Type",
+                [
+                    "Select fuel type",
+                    "Diesel",
+                    "Gasoline",
+                ],
+                key="ui_fuel_type",
+                disabled=not vin_valid,
+            )
+
+        with option_column_2:
+            axle_type = st.selectbox(
+                "Axle Type",
+                [
+                    "Select axle type",
+                    "Front Axle",
+                    "Rear Axle",
+                ],
+                key="ui_axle_type",
+                disabled=not vin_valid,
+            )
+
+        vehicle_configuration = (
+            f"{fuel_type} | {axle_type}"
+        )
+
+    else:
+        fuel_type = "N/A"
+
+        axle_type = (
+            "Transfer Case / 6th Gear"
+        )
+
+        vehicle_configuration = (
+            "Transfer Case | 6th Gear"
+        )
+
+        with option_column_1:
+            st.text_input(
+                "Gear",
+                value="6th Gear",
+                key="ui_tc_gear",
+                disabled=True,
+            )
+
+        with option_column_2:
+            st.text_input(
+                "Component",
+                value="Transfer Case",
+                key="ui_tc_component",
+                disabled=True,
+            )
+
+    if vin_number and not vin_valid:
+        st.error(
+            "VIN must contain exactly 17 letters or numbers."
+        )
+
+    elif vin_valid:
+        st.success(
+            "Vehicle identification completed."
+        )
+
+
+# =============================================================================
+# MEASUREMENT DATA CARD
+# =============================================================================
+
+with st.container(
+    border=True,
+):
+    render_section_title(
+        "Measurement Data",
+        "Upload Time, ChA, ChB, ChC and RPM measurement data.",
+    )
+
+    upload_column, file_information_column = st.columns(
+        [1.7, 1.0]
+    )
+
+    with upload_column:
+        uploaded_file = st.file_uploader(
+            "Upload Measurement File",
+            type=[
+                "xlsx",
+                "csv",
+            ],
+            key="ui_measurement_file",
+            disabled=not vin_valid,
+            help=(
+                "Supported file types: XLSX and CSV. "
+                "Expected first five columns: "
+                "Time, ChA, ChB, ChC, RPM."
+            ),
+        )
+
+    with file_information_column:
+        st.markdown(
+            """
+<div style="
+    background:#f7fafc;
+    border:1px solid #dfe5ea;
+    border-radius:12px;
+    padding:16px;
+    min-height:135px;
+">
+    <div style="
+        color:#18324a;
+        font-weight:700;
+        margin-bottom:8px;
+    ">
+        Required Data Structure
+    </div>
+    <div style="
+        color:#647787;
+        font-size:0.88rem;
+        line-height:1.65;
+    ">
+        • Time [s]<br>
+        • ChA vibration<br>
+        • ChB vibration<br>
+        • ChC vibration<br>
+        • RPM
+    </div>
+</div>
+""",
+            unsafe_allow_html=True,
+        )
+
+    if uploaded_file is not None:
+        file_size_mb = (
+            uploaded_file.size
+            / 1024
+            / 1024
+        )
+
+        file_summary_columns = st.columns(
+            3
+        )
+
+        file_summary_columns[0].metric(
+            "File",
+            uploaded_file.name,
+        )
+
+        file_summary_columns[1].metric(
+            "Format",
+            uploaded_file.name.rsplit(
+                ".",
+                1,
+            )[-1].upper(),
+        )
+
+        file_summary_columns[2].metric(
+            "Size",
+            f"{file_size_mb:.1f} MB",
+        )
+
+
+# =============================================================================
+# INPUT COMPLETENESS
+# =============================================================================
+
+if analysis_type == ANALYSIS_AXLE:
+    can_continue = (
+        vin_valid
+        and fuel_type
+        != "Select fuel type"
+        and axle_type
+        != "Select axle type"
+        and uploaded_file
+        is not None
+    )
+
+else:
+    can_continue = (
+        vin_valid
+        and uploaded_file
+        is not None
+    )
+
+
+# =============================================================================
+# ANALYSIS-SPECIFIC DEFAULTS
+# =============================================================================
+
+if analysis_type == ANALYSIS_AXLE:
+    if (
+        fuel_type
+        != "Select fuel type"
+        and axle_type
+        != "Select axle type"
+    ):
+        order_definitions = (
+            build_axle_order_definitions(
+                fuel_type=fuel_type,
+                axle_type=axle_type,
+            )
+        )
+    else:
+        order_definitions = {}
+
+    fixed_samples_per_rev = 512
+    fixed_revs_per_block = 8
+    fixed_overlap = 0.75
+    fixed_rpm_step = 10.0
+    fixed_calibration_factor = 1.0
+
+    minimum_max_order = 20
+    default_max_order = 30
+
+else:
+    order_definitions = (
+        TRANSFER_CASE_ORDERS
+    )
+
+    fixed_samples_per_rev = 512
+    fixed_revs_per_block = 20
+    fixed_overlap = 0.75
+    fixed_rpm_step = 10.0
+    fixed_calibration_factor = 1.0
+
+    minimum_max_order = 171
+    default_max_order = 200
+
+
+# =============================================================================
+# ANALYSIS SETTINGS CARD
+# =============================================================================
+
+with st.container(
+    border=True,
+):
+    render_section_title(
+        "Analysis Configuration",
+        "Review the standard settings or open the advanced controls.",
+    )
+
+    setting_columns = st.columns(
+        5
+    )
+
+    setting_columns[0].metric(
+        "Samples / Rev",
+        fixed_samples_per_rev,
+    )
+
+    setting_columns[1].metric(
+        "Revs / Block",
+        fixed_revs_per_block,
+    )
+
+    setting_columns[2].metric(
+        "Overlap",
+        f"{fixed_overlap * 100:.0f}%",
+    )
+
+    setting_columns[3].metric(
+        "RPM Step",
+        f"{fixed_rpm_step:.0f}",
+    )
+
+    setting_columns[4].metric(
+        "Default Max Order",
+        default_max_order,
+    )
+
+    with st.expander(
+        "Advanced Analysis Settings",
+        expanded=False,
+    ):
+        advanced_column_1, advanced_column_2, advanced_column_3 = (
+            st.columns(3)
+        )
+
+        with advanced_column_1:
+            selected_channel = st.selectbox(
+                "Order Map Channel",
+                CHANNEL_NAMES,
+                key="ui_order_map_channel",
+            )
+
+        with advanced_column_2:
+            max_order = st.slider(
+                "Max Order",
+                min_value=minimum_max_order,
+                max_value=250,
+                value=default_max_order,
+                step=1,
+                key="ui_max_order",
+            )
+
+        with advanced_column_3:
+            order_width = st.number_input(
+                "Order Bandwidth",
+                min_value=0.05,
+                max_value=2.0,
+                value=0.15,
+                step=0.05,
+                format="%.2f",
+                key="ui_order_width",
+            )
+
+    if analysis_type == ANALYSIS_TRANSFER_CASE:
+        st.info(
+            "Transfer Case analysis uses 20 revolutions per FFT block, "
+            "providing 0.05 order resolution for 85.05 and 170.10 orders."
+        )
+
+
+# =============================================================================
+# CURRENT CONFIGURATION SUMMARY
+# =============================================================================
+
+with st.container(
+    border=True,
+):
+    render_section_title(
+        "Analysis Readiness",
+        "Confirm the current configuration before starting the analysis.",
+    )
+
+    readiness_columns = st.columns(
+        4
+    )
+
+    readiness_columns[0].metric(
+        "VIN",
+        vin_number
+        if vin_valid
+        else "Not ready",
+    )
+
+    readiness_columns[1].metric(
+        "Analysis",
+        (
+            "Axle Whine"
+            if analysis_type
+            == ANALYSIS_AXLE
+            else "Transfer Case"
+        ),
+    )
+
+    readiness_columns[2].metric(
+        "Configuration",
+        vehicle_configuration,
+    )
+
+    readiness_columns[3].metric(
+        "Input Status",
+        (
+            "Ready"
+            if can_continue
+            else "Incomplete"
+        ),
+    )
+
+    if can_continue:
+        st.success(
+            "All required inputs are available. "
+            "The analysis can be started."
+        )
+
+    elif not vin_valid:
+        st.warning(
+            "Enter a valid 17-character VIN."
+        )
+
+    elif analysis_type == ANALYSIS_AXLE:
+        st.warning(
+            "Select the fuel type and axle type, "
+            "then upload a measurement file."
+        )
+
+    else:
+        st.warning(
+            "Upload a measurement file to continue."
+        )
+
+
+# =============================================================================
+# SESSION STATE SAFETY
+# =============================================================================
+
+current_input_signature = build_input_signature(
+    vin_value=vin_number,
+    selected_analysis=analysis_type,
+    selected_fuel=fuel_type,
+    selected_axle=axle_type,
+    uploaded_measurement_file=uploaded_file,
+    selected_max_order=max_order,
+    selected_order_width=order_width,
+    selected_map_channel=selected_channel,
+)
+
+previous_input_signature = st.session_state.get(
+    "input_signature"
+)
+
+if (
+    previous_input_signature is not None
+    and previous_input_signature
+    != current_input_signature
+):
+    clear_analysis_session_state()
+
+st.session_state[
+    "input_signature"
+] = current_input_signature
+
+
+# =============================================================================
+# SYSTEM STATUS
+# =============================================================================
+
+with st.expander(
+    "System and Module Status",
+    expanded=False,
+):
+    status_column_1, status_column_2 = st.columns(
+        2
+    )
+
+    with status_column_1:
+        st.success(
+            "Axle Whine engine: Ready"
+        )
+
+        st.success(
+            "Transfer Case engine: Ready"
+        )
+
+    with status_column_2:
+        st.write(
+            {
+                "Supported files": [
+                    "XLSX",
+                    "CSV",
+                ],
+                "Channels": CHANNEL_NAMES,
+                "CSV conversion": "g → m/s²",
+            }
+        )
+
+    st.write(
+        "Transfer Case module validation:"
+    )
+
+    st.json(
+        transfer_case_validation
+    )
     return output
 
     try:
