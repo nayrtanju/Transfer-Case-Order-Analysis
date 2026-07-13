@@ -9,14 +9,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import streamlit as st
-
 from openpyxl.drawing.image import Image as XLImage
 from openpyxl.styles import Font, PatternFill
 
 
 # =============================================================================
-# STREAMLIT PAGE CONFIGURATION
+# PAGE CONFIGURATION
 # =============================================================================
+
 st.set_page_config(
     page_title="NVH Analysis Suite",
     page_icon="⚙️",
@@ -24,411 +24,23 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+
 # =============================================================================
-# CORPORATE UI THEME
-# =============================================================================
-
-st.markdown(
-    """
-    <style>
-    /* ---------------------------------------------------------
-       GLOBAL PAGE
-    --------------------------------------------------------- */
-
-    .stApp {
-        background-color: #f4f6f8;
-    }
-
-    .block-container {
-        max-width: 1450px;
-        padding-top: 1.5rem;
-        padding-bottom: 3rem;
-        padding-left: 2rem;
-        padding-right: 2rem;
-    }
-
-    html,
-    body,
-    [class*="css"] {
-        font-family:
-            Inter,
-            "Segoe UI",
-            Arial,
-            sans-serif;
-    }
-/* ---------------------------------------------------------
-   STREAMLIT CONTAINERS / ENGINEERING CARDS
---------------------------------------------------------- */
-
-div[data-testid="stVerticalBlockBorderWrapper"] {
-    background-color: #ffffff;
-
-    border:
-        1px solid
-        #dfe5ea !important;
-
-    border-radius: 14px !important;
-
-    padding: 8px 14px 16px 14px;
-
-    margin-bottom: 18px;
-
-    box-shadow:
-        0 4px 16px
-        rgba(17, 45, 72, 0.06);
-}
-
-    /* ---------------------------------------------------------
-       HEADER
-    --------------------------------------------------------- */
-
-    .corporate-header {
-        background:
-            linear-gradient(
-                135deg,
-                #0b1f33 0%,
-                #123a63 55%,
-                #1768a6 100%
-            );
-
-        border-radius: 16px;
-        padding: 28px 34px;
-        margin-bottom: 24px;
-
-        box-shadow:
-            0 10px 30px rgba(11, 31, 51, 0.18);
-
-        color: white;
-    }
-
-    .corporate-header-title {
-        font-size: 2.05rem;
-        font-weight: 700;
-        line-height: 1.15;
-        margin: 0;
-        letter-spacing: -0.02em;
-    }
-
-    .corporate-header-subtitle {
-        font-size: 1rem;
-        margin-top: 8px;
-        color: rgba(255, 255, 255, 0.82);
-    }
-
-    .corporate-header-badge {
-        display: inline-block;
-        margin-top: 14px;
-        padding: 6px 12px;
-
-        border-radius: 999px;
-
-        background-color:
-            rgba(255, 255, 255, 0.14);
-
-        border:
-            1px solid
-            rgba(255, 255, 255, 0.20);
-
-        font-size: 0.82rem;
-        font-weight: 600;
-        letter-spacing: 0.02em;
-    }
-
-
-    /* ---------------------------------------------------------
-       SECTION TITLES
-    --------------------------------------------------------- */
-
-    .section-title {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #18324a;
-
-        margin-top: 1.6rem;
-        margin-bottom: 0.7rem;
-
-        padding-left: 12px;
-        border-left: 4px solid #1768a6;
-    }
-
-
-    /* ---------------------------------------------------------
-       CARD DESIGN
-    --------------------------------------------------------- */
-
-    .engineering-card {
-        background-color: #ffffff;
-
-        border:
-            1px solid
-            #dfe5ea;
-
-        border-radius: 14px;
-
-        padding: 18px 20px;
-
-        margin-bottom: 16px;
-
-        box-shadow:
-            0 4px 16px
-            rgba(17, 45, 72, 0.06);
-    }
-
-
-    /* ---------------------------------------------------------
-       INPUTS
-    --------------------------------------------------------- */
-
-    div[data-baseweb="input"] > div,
-    div[data-baseweb="select"] > div {
-        border-radius: 10px !important;
-        border-color: #cdd7df !important;
-        background-color: white !important;
-    }
-
-    div[data-baseweb="input"] > div:focus-within,
-    div[data-baseweb="select"] > div:focus-within {
-        border-color: #1768a6 !important;
-
-        box-shadow:
-            0 0 0 2px
-            rgba(23, 104, 166, 0.12) !important;
-    }
-
-
-    /* ---------------------------------------------------------
-       FILE UPLOADER
-    --------------------------------------------------------- */
-
-    section[data-testid="stFileUploaderDropzone"] {
-        background-color: #ffffff;
-
-        border:
-            1.5px dashed
-            #9eb5c7;
-
-        border-radius: 14px;
-
-        padding: 18px;
-
-        transition:
-            border-color 0.2s ease,
-            background-color 0.2s ease;
-    }
-
-    section[data-testid="stFileUploaderDropzone"]:hover {
-        border-color: #1768a6;
-        background-color: #f7fbff;
-    }
-
-
-    /* ---------------------------------------------------------
-       BUTTONS
-    --------------------------------------------------------- */
-
-    .stButton > button {
-        min-height: 48px;
-
-        border-radius: 10px;
-
-        border: none;
-
-        font-weight: 700;
-        letter-spacing: 0.01em;
-
-        background:
-            linear-gradient(
-                135deg,
-                #155d95,
-                #1d78bd
-            );
-
-        color: white;
-
-        box-shadow:
-            0 6px 16px
-            rgba(23, 104, 166, 0.24);
-
-        transition:
-            transform 0.15s ease,
-            box-shadow 0.15s ease;
-    }
-
-    .stButton > button:hover {
-        transform: translateY(-1px);
-
-        box-shadow:
-            0 9px 22px
-            rgba(23, 104, 166, 0.28);
-
-        color: white;
-    }
-
-
-    /* ---------------------------------------------------------
-       DOWNLOAD BUTTON
-    --------------------------------------------------------- */
-
-    .stDownloadButton > button {
-        min-height: 46px;
-
-        border-radius: 10px;
-
-        border:
-            1px solid
-            #1768a6;
-
-        background-color: white;
-
-        color: #1768a6;
-
-        font-weight: 700;
-    }
-
-    .stDownloadButton > button:hover {
-        background-color: #1768a6;
-        color: white;
-    }
-
-
-    /* ---------------------------------------------------------
-       METRICS
-    --------------------------------------------------------- */
-
-    div[data-testid="metric-container"] {
-        background-color: white;
-
-        border:
-            1px solid
-            #dfe5ea;
-
-        border-radius: 12px;
-
-        padding: 14px 16px;
-
-        box-shadow:
-            0 3px 12px
-            rgba(17, 45, 72, 0.05);
-    }
-
-    div[data-testid="metric-container"]
-    label {
-        color: #5c6f7f !important;
-        font-weight: 600 !important;
-    }
-
-    div[data-testid="metric-container"]
-    [data-testid="stMetricValue"] {
-        color: #17324d;
-        font-weight: 700;
-    }
-
-
-    /* ---------------------------------------------------------
-       TABS
-    --------------------------------------------------------- */
-
-    button[data-baseweb="tab"] {
-        font-weight: 600;
-        padding-left: 18px;
-        padding-right: 18px;
-    }
-
-    button[data-baseweb="tab"][aria-selected="true"] {
-        color: #1768a6 !important;
-    }
-
-
-    /* ---------------------------------------------------------
-       DATAFRAMES
-    --------------------------------------------------------- */
-
-    div[data-testid="stDataFrame"] {
-        border-radius: 12px;
-        overflow: hidden;
-
-        border:
-            1px solid
-            #dfe5ea;
-    }
-
-
-    /* ---------------------------------------------------------
-       STATUS MESSAGES
-    --------------------------------------------------------- */
-
-    div[data-testid="stAlert"] {
-        border-radius: 12px;
-    }
-
-
-    /* ---------------------------------------------------------
-       HIDE DEFAULT STREAMLIT CHROME
-    --------------------------------------------------------- */
-
-    #MainMenu {
-        visibility: hidden;
-    }
-
-    footer {
-        visibility: hidden;
-    }
-
-    header[data-testid="stHeader"] {
-        background-color: transparent;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-# =============================================================================
-# CORPORATE HEADER
-# =============================================================================
-
-st.markdown(
-    """
-<div class="corporate-header">
-    <div class="corporate-header-title">NVH Analysis Suite</div>
-    <div class="corporate-header-subtitle">
-        Axle Whine and Transfer Case Gear Mesh Analysis Platform
-    </div>
-    <div class="corporate-header-badge">
-        Engineering Validation Environment
-    </div>
-</div>
-    """,
-    unsafe_allow_html=True,
-)
-# =============================================================================
-# ANALYSIS TYPE CONSTANTS
+# CONSTANTS
 # =============================================================================
 
 ANALYSIS_AXLE = "Axle Whine Order Analysis"
+ANALYSIS_TRANSFER_CASE = "Transfer Case Gear Mesh Analysis"
 
-ANALYSIS_TRANSFER_CASE = (
-    "Transfer Case Gear Mesh Analysis"
-)
-
-CHANNEL_NAMES = [
-    "ChA",
-    "ChB",
-    "ChC",
-]
-
-
-# =============================================================================
-# GENERAL APPLICATION CONSTANTS
-# =============================================================================
+CHANNEL_NAMES = ["ChA", "ChB", "ChC"]
 
 MAX_FILE_SIZE_MB = 500
-
 MAX_ROWS = 3_000_000
-
 G_TO_MS2 = 9.80665
 
 
 # =============================================================================
-# AXLE WHINE ANALYSIS ENGINE IMPORT
+# ANALYSIS ENGINE IMPORTS
 # =============================================================================
 
 try:
@@ -438,22 +50,10 @@ try:
         order_map as axle_order_map,
         extract_order_vs_rpm as axle_extract_order_vs_rpm,
     )
-
 except Exception:
-    st.error(
-        "order_analysis.py could not be loaded."
-    )
-
-    st.code(
-        traceback.format_exc()
-    )
-
+    st.error("order_analysis.py could not be loaded.")
+    st.code(traceback.format_exc())
     st.stop()
-
-
-# =============================================================================
-# TRANSFER CASE ANALYSIS ENGINE IMPORT
-# =============================================================================
 
 try:
     from transfer_case_analysis import (
@@ -462,1750 +62,303 @@ try:
         order_map as tc_order_map,
         analyze_transfer_case_orders,
         TRANSFER_CASE_ORDERS,
-        validate_transfer_case_module,
     )
-
 except Exception:
-    st.error(
-        "transfer_case_analysis.py could not be loaded."
-    )
-
-    st.code(
-        traceback.format_exc()
-    )
-
+    st.error("transfer_case_analysis.py could not be loaded.")
+    st.code(traceback.format_exc())
     st.stop()
 
 
 # =============================================================================
-# TRANSFER CASE MODULE VALIDATION
+# CORPORATE UI THEME
 # =============================================================================
 
-try:
-    transfer_case_validation = (
-        validate_transfer_case_module()
-    )
+st.markdown(
+    """
+<style>
+.stApp {
+    background: #f3f6f9;
+}
 
-except Exception:
-    st.error(
-        "Transfer Case analysis module validation failed."
-    )
+.block-container {
+    max-width: 1480px;
+    padding-top: 1.3rem;
+    padding-bottom: 3rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
+}
 
-    st.code(
-        traceback.format_exc()
-    )
+html, body, [class*="css"] {
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
 
-    st.stop()
-    # =============================================================================
-# AXLE WHINE TARGET DEFINITIONS
+#MainMenu, footer {
+    visibility: hidden;
+}
+
+header[data-testid="stHeader"] {
+    background: transparent;
+}
+
+.corporate-header {
+    background: linear-gradient(135deg, #0b1f33 0%, #123a63 55%, #1768a6 100%);
+    border-radius: 18px;
+    padding: 30px 36px;
+    margin-bottom: 18px;
+    box-shadow: 0 12px 30px rgba(11, 31, 51, 0.18);
+    color: #ffffff;
+}
+
+.corporate-title {
+    font-size: 2.15rem;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+}
+
+.corporate-subtitle {
+    color: rgba(255,255,255,0.82);
+    font-size: 1rem;
+    margin-top: 8px;
+}
+
+.corporate-badge {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.22);
+    background: rgba(255,255,255,0.12);
+    font-size: 0.82rem;
+    font-weight: 650;
+}
+
+.section-title {
+    border-left: 4px solid #1768a6;
+    padding-left: 12px;
+    margin-top: 0.3rem;
+    margin-bottom: 0.7rem;
+    color: #18324a;
+    font-size: 1.08rem;
+    font-weight: 750;
+}
+
+.section-subtitle {
+    color: #6a7d8c;
+    font-size: 0.86rem;
+    margin-top: 3px;
+    font-weight: 400;
+}
+
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    background: #ffffff;
+    border: 1px solid #dce4ea !important;
+    border-radius: 15px !important;
+    padding: 8px 14px 16px 14px;
+    margin-bottom: 16px;
+    box-shadow: 0 5px 16px rgba(17, 45, 72, 0.06);
+}
+
+div[data-testid="metric-container"] {
+    background: #ffffff;
+    border: 1px solid #dce4ea;
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0 3px 12px rgba(17, 45, 72, 0.05);
+}
+
+div[data-testid="metric-container"] label {
+    color: #607585 !important;
+    font-weight: 650 !important;
+}
+
+div[data-testid="metric-container"] [data-testid="stMetricValue"] {
+    color: #17324d;
+    font-weight: 750;
+}
+
+div[data-baseweb="input"] > div,
+div[data-baseweb="select"] > div {
+    border-radius: 10px !important;
+    border-color: #cbd7df !important;
+    background: #ffffff !important;
+}
+
+section[data-testid="stFileUploaderDropzone"] {
+    background: #ffffff;
+    border: 1.5px dashed #9bb2c3;
+    border-radius: 14px;
+}
+
+.stButton > button {
+    min-height: 50px;
+    border: none;
+    border-radius: 11px;
+    background: linear-gradient(135deg, #155d95, #1d78bd);
+    color: #ffffff;
+    font-weight: 750;
+    box-shadow: 0 7px 18px rgba(23, 104, 166, 0.24);
+}
+
+.stButton > button:hover {
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.stDownloadButton > button {
+    min-height: 46px;
+    border-radius: 10px;
+    border: 1px solid #1768a6;
+    background: #ffffff;
+    color: #1768a6;
+    font-weight: 750;
+}
+
+.stDownloadButton > button:hover {
+    background: #1768a6;
+    color: #ffffff;
+}
+
+button[data-baseweb="tab"] {
+    font-weight: 650;
+}
+
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: #1768a6 !important;
+}
+
+div[data-testid="stAlert"],
+div[data-testid="stDataFrame"] {
+    border-radius: 12px;
+}
+
+.workflow-card {
+    background: #ffffff;
+    border: 1px solid #dce4ea;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    box-shadow: 0 3px 10px rgba(17,45,72,0.04);
+}
+
+.workflow-number {
+    color: #1768a6;
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+}
+
+.workflow-name {
+    color: #18324a;
+    font-size: 0.95rem;
+    font-weight: 750;
+    margin-top: 2px;
+}
+
+.info-panel {
+    background: #f7fafc;
+    border: 1px solid #dce4ea;
+    border-radius: 12px;
+    padding: 16px;
+    min-height: 136px;
+}
+
+.info-panel-title {
+    color: #18324a;
+    font-weight: 750;
+    margin-bottom: 8px;
+}
+
+.info-panel-body {
+    color: #647787;
+    font-size: 0.88rem;
+    line-height: 1.7;
+}
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    """
+<div class="corporate-header">
+    <div class="corporate-title">NVH Analysis Suite</div>
+    <div class="corporate-subtitle">
+        Axle Whine and Transfer Case Gear Mesh Analysis Platform
+    </div>
+    <div class="corporate-badge">Engineering Validation Environment</div>
+</div>
+""",
+    unsafe_allow_html=True,
+)
+
+
+# =============================================================================
+# TARGET DEFINITIONS
 # =============================================================================
 
 AXLE_TARGETS = {
     "Diesel": {
         "Front Axle": {
-            "rpm": np.array(
-                [
-                    1000,
-                    1500,
-                    2000,
-                    2500,
-                    3000,
-                    3500,
-                    4000,
-                    4500,
-                ],
-                dtype=float,
-            ),
-            "amp": np.array(
-                [
-                    2.5,
-                    2.5,
-                    2.5,
-                    7.5,
-                    7.5,
-                    7.5,
-                    7.5,
-                    7.5,
-                ],
-                dtype=float,
-            ),
+            "rpm": np.array([1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500], dtype=float),
+            "amp": np.array([2.5, 2.5, 2.5, 7.5, 7.5, 7.5, 7.5, 7.5], dtype=float),
         },
-
         "Rear Axle": {
-            "rpm": np.array(
-                [
-                    1000,
-                    1500,
-                    2000,
-                    2500,
-                    3000,
-                    3500,
-                    4000,
-                    4500,
-                ],
-                dtype=float,
-            ),
-            "amp": np.array(
-                [
-                    2.5,
-                    2.5,
-                    2.5,
-                    7.5,
-                    7.5,
-                    7.5,
-                    7.5,
-                    7.5,
-                ],
-                dtype=float,
-            ),
+            "rpm": np.array([1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500], dtype=float),
+            "amp": np.array([2.5, 2.5, 2.5, 7.5, 7.5, 7.5, 7.5, 7.5], dtype=float),
         },
     },
-
     "Gasoline": {
         "Front Axle": {
-            "rpm": np.array(
-                [
-                    1000,
-                    1500,
-                    2000,
-                    2500,
-                    3000,
-                    3500,
-                    4000,
-                    4500,
-                ],
-                dtype=float,
-            ),
-            "amp": np.array(
-                [
-                    2.5,
-                    2.5,
-                    2.5,
-                    6.25,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                ],
-                dtype=float,
-            ),
+            "rpm": np.array([1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500], dtype=float),
+            "amp": np.array([2.5, 2.5, 2.5, 6.25, 10.0, 10.0, 10.0, 10.0], dtype=float),
         },
-
         "Rear Axle": {
-            "rpm": np.array(
-                [
-                    1000,
-                    1500,
-                    2000,
-                    2500,
-                    3000,
-                    3500,
-                    4000,
-                    4500,
-                ],
-                dtype=float,
-            ),
-            "amp": np.array(
-                [
-                    5.0,
-                    5.0,
-                    5.0,
-                    10.0,
-                    12.5,
-                    12.5,
-                    12.5,
-                    12.5,
-                ],
-                dtype=float,
-            ),
+            "rpm": np.array([1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500], dtype=float),
+            "amp": np.array([5.0, 5.0, 5.0, 10.0, 12.5, 12.5, 12.5, 12.5], dtype=float),
         },
     },
 }
 
 
 # =============================================================================
-# AXLE WHINE ORDER DEFINITIONS
+# COMMON HELPERS
 # =============================================================================
 
-def build_axle_order_definitions(
-    fuel_type: str,
-    axle_type: str
-) -> Dict[float, dict]:
-    """
-    Create the 10th and 20th order definitions for Axle Whine analysis.
-    """
-    if fuel_type not in AXLE_TARGETS:
-        raise ValueError(
-            f"Unsupported fuel type: {fuel_type}"
-        )
-
-    if axle_type not in AXLE_TARGETS[fuel_type]:
-        raise ValueError(
-            f"Unsupported axle type: {axle_type}"
-        )
-
-    target_definition = (
-        AXLE_TARGETS[
-            fuel_type
-        ][
-            axle_type
-        ]
+def section_title(title: str, subtitle: Optional[str] = None) -> None:
+    subtitle_html = (
+        f'<div class="section-subtitle">{subtitle}</div>'
+        if subtitle
+        else ""
     )
-
-    return {
-        10.0: {
-            "label": "10th Order",
-            "harmonic": "Base",
-            "target_rpm": target_definition[
-                "rpm"
-            ],
-            "target_amp": target_definition[
-                "amp"
-            ],
-        },
-
-        20.0: {
-            "label": "20th Order",
-            "harmonic": "2nd",
-            "target_rpm": target_definition[
-                "rpm"
-            ],
-            "target_amp": target_definition[
-                "amp"
-            ],
-        },
-    }
-
-
-# =============================================================================
-# UNIT CONVERSION
-# =============================================================================
-
-def convert_csv_g_to_ms2_if_needed(
-    headers: list,
-    data: np.ndarray
-) -> Tuple[np.ndarray, list]:
-    """
-    Convert ChA, ChB and ChC from g to m/s² when the CSV headers indicate g.
-
-    Supported examples:
-
-        ChA (g)
-        ChB [g]
-        ChC g
-    """
-    converted_channels = []
-
-    if len(headers) < 4:
-        return data, converted_channels
-
-    for column_index in [
-        1,
-        2,
-        3,
-    ]:
-        header = str(
-            headers[
-                column_index
-            ]
-        ).strip().lower()
-
-        is_g_unit = (
-            "(g)" in header
-            or "[g]" in header
-            or header.endswith(" g")
-        )
-
-        if is_g_unit:
-            data[
-                :,
-                column_index
-            ] = (
-                data[
-                    :,
-                    column_index
-                ]
-                * G_TO_MS2
-            )
-
-            converted_channels.append(
-                str(
-                    headers[
-                        column_index
-                    ]
-                )
-            )
-
-    return (
-        data,
-        converted_channels,
-    )
-
-
-# =============================================================================
-# MEASUREMENT FILE LOADING
-# =============================================================================
-
-def load_measurement_file(
-    uploaded_file,
-    analysis_type: str
-) -> Tuple[list, np.ndarray]:
-    """
-    Load and validate XLSX or CSV measurement data.
-
-    Expected first five columns:
-
-        Time
-        ChA
-        ChB
-        ChC
-        RPM
-    """
-    if uploaded_file is None:
-        raise ValueError(
-            "No measurement file was uploaded."
-        )
-
-    uploaded_file_name = str(
-        uploaded_file.name
-    )
-
-    if "." not in uploaded_file_name:
-        raise ValueError(
-            "Uploaded file has no extension."
-        )
-
-    file_extension = (
-        uploaded_file_name
-        .rsplit(
-            ".",
-            1,
-        )[-1]
-        .lower()
-    )
-
-    if (
-        uploaded_file.size
-        > MAX_FILE_SIZE_MB
-        * 1024
-        * 1024
-    ):
-        raise ValueError(
-            f"File exceeds the maximum allowed size "
-            f"of {MAX_FILE_SIZE_MB} MB."
-        )
-
-    converted_channels = []
-
-    # -------------------------------------------------------------------------
-    # XLSX
-    # -------------------------------------------------------------------------
-
-    if file_extension == "xlsx":
-        temporary_path = None
-
-        try:
-            with tempfile.NamedTemporaryFile(
-                delete=False,
-                suffix=".xlsx",
-            ) as temporary_file:
-                temporary_file.write(
-                    uploaded_file.getvalue()
-                )
-
-                temporary_path = (
-                    temporary_file.name
-                )
-
-            if (
-                analysis_type
-                == ANALYSIS_TRANSFER_CASE
-            ):
-                headers, data = (
-                    tc_read_xlsx_numeric(
-                        temporary_path
-                    )
-                )
-
-            else:
-                headers, data = (
-                    axle_read_xlsx_numeric(
-                        temporary_path
-                    )
-                )
-
-        finally:
-            if (
-                temporary_path
-                and os.path.exists(
-                    temporary_path
-                )
-            ):
-                try:
-                    os.remove(
-                        temporary_path
-                    )
-                except OSError:
-                    pass
-
-    # -------------------------------------------------------------------------
-    # CSV
-    # -------------------------------------------------------------------------
-
-    elif file_extension == "csv":
-        try:
-            uploaded_file.seek(
-                0
-            )
-
-            dataframe = pd.read_csv(
-                uploaded_file,
-                sep=None,
-                engine="python",
-            )
-
-            headers = list(
-                dataframe.columns
-            )
-
-            data = dataframe.to_numpy(
-                dtype=float
-            )
-
-        except Exception as error:
-            raise ValueError(
-                "CSV file could not be read. "
-                "Please check the delimiter and numeric data format."
-            ) from error
-
-        data, converted_channels = (
-            convert_csv_g_to_ms2_if_needed(
-                headers,
-                data,
-            )
-        )
-
-    else:
-        raise ValueError(
-            "Unsupported file format. "
-            "Please upload an XLSX or CSV file."
-        )
-
-    data = np.asarray(
-        data,
-        dtype=float,
-    )
-
-    # -------------------------------------------------------------------------
-    # Shape validation
-    # -------------------------------------------------------------------------
-
-    if (
-        data.ndim != 2
-        or data.shape[1] < 5
-    ):
-        raise ValueError(
-            "Measurement file must contain at least five columns "
-            "in this order: Time, ChA, ChB, ChC, RPM."
-        )
-
-    if data.shape[0] > MAX_ROWS:
-        raise ValueError(
-            f"Dataset exceeds the maximum row limit "
-            f"of {MAX_ROWS:,} rows."
-        )
-
-    if data.shape[0] < 10:
-        raise ValueError(
-            "Dataset is too short for order analysis."
-        )
-
-    first_five_columns = data[
-        :,
-        :5
-    ]
-
-    if not np.all(
-        np.isfinite(
-            first_five_columns
-        )
-    ):
-        raise ValueError(
-            "The first five columns contain NaN, infinite "
-            "or non-numeric values."
-        )
-
-    # -------------------------------------------------------------------------
-    # Time and RPM validation
-    # -------------------------------------------------------------------------
-
-    time = data[
-        :,
-        0
-    ]
-
-    rpm = data[
-        :,
-        4
-    ]
-
-    # Repeated time values are allowed.
-    # Only decreasing time values are rejected.
-    if np.any(
-        np.diff(time) < 0
-    ):
-        raise ValueError(
-            "Time column contains decreasing values."
-        )
-
-    if np.any(
-        rpm <= 0
-    ):
-        raise ValueError(
-            "RPM column must contain only positive values."
-        )
-
-    if converted_channels:
-        st.info(
-            "CSV vibration channels converted from g to m/s²: "
-            + ", ".join(
-                converted_channels
-            )
-        )
-
-    return (
-        headers,
-        data,
-    )
-    # =============================================================================
-# COMMON TARGET EVALUATION HELPERS
-# =============================================================================
-
-def integrate_positive_area(
-    rpm: np.ndarray,
-    difference: np.ndarray
-) -> float:
-    """
-    Integrate only the part of a curve that is above zero.
-
-    Used for calculating total target exceedance area.
-
-    Unit:
-        m/s² · RPM
-    """
-    rpm = np.asarray(
-        rpm,
-        dtype=float,
-    )
-
-    difference = np.asarray(
-        difference,
-        dtype=float,
-    )
-
-    if len(rpm) != len(difference):
-        raise ValueError(
-            "RPM and difference arrays must have the same length."
-        )
-
-    valid_mask = (
-        np.isfinite(rpm)
-        & np.isfinite(difference)
-    )
-
-    rpm = rpm[
-        valid_mask
-    ]
-
-    difference = difference[
-        valid_mask
-    ]
-
-    if len(rpm) < 2:
-        return 0.0
-
-    positive_difference = np.maximum(
-        difference,
-        0.0,
-    )
-
-    if hasattr(
-        np,
-        "trapezoid",
-    ):
-        area = np.trapezoid(
-            positive_difference,
-            rpm,
-        )
-    else:
-        area = np.trapz(
-            positive_difference,
-            rpm,
-        )
-
-    return float(area)
-
-
-def evaluate_curve_against_target(
-    rpm: np.ndarray,
-    amplitude: np.ndarray,
-    target_rpm: Optional[np.ndarray],
-    target_amp: Optional[np.ndarray]
-) -> dict:
-    """
-    Evaluate one order curve against a target curve.
-
-    Returns:
-        Peak RPM
-        Peak Amplitude
-        Target at Peak RPM
-        Max Margin
-        Max Margin %
-        Exceedance Area
-        Status
-    """
-    rpm = np.asarray(
-        rpm,
-        dtype=float,
-    )
-
-    amplitude = np.asarray(
-        amplitude,
-        dtype=float,
-    )
-
-    if len(rpm) != len(amplitude):
-        raise ValueError(
-            "RPM and amplitude arrays must have the same length."
-        )
-
-    valid_mask = (
-        np.isfinite(rpm)
-        & np.isfinite(amplitude)
-    )
-
-    rpm = rpm[
-        valid_mask
-    ]
-
-    amplitude = amplitude[
-        valid_mask
-    ]
-
-    if len(rpm) == 0:
-        raise ValueError(
-            "No valid order curve data are available for evaluation."
-        )
-
-    peak_index = int(
-        np.argmax(
-            amplitude
-        )
-    )
-
-    peak_rpm = float(
-        rpm[
-            peak_index
-        ]
-    )
-
-    peak_amplitude = float(
-        amplitude[
-            peak_index
-        ]
-    )
-
-    has_target = (
-        target_rpm is not None
-        and target_amp is not None
-    )
-
-    if not has_target:
-        return {
-            "Peak RPM": peak_rpm,
-            "Peak Amplitude [m/s²]": peak_amplitude,
-            "Target at Peak RPM [m/s²]": np.nan,
-            "Max Margin [m/s²]": np.nan,
-            "Max Margin [%]": np.nan,
-            "Exceedance Area [m/s²·RPM]": np.nan,
-            "Status": "INFO",
-        }
-
-    target_rpm = np.asarray(
-        target_rpm,
-        dtype=float,
-    )
-
-    target_amp = np.asarray(
-        target_amp,
-        dtype=float,
-    )
-
-    if len(target_rpm) != len(target_amp):
-        raise ValueError(
-            "Target RPM and target amplitude arrays must have the same length."
-        )
-
-    if len(target_rpm) < 2:
-        raise ValueError(
-            "At least two target points are required."
-        )
-
-    target_valid_mask = (
-        np.isfinite(target_rpm)
-        & np.isfinite(target_amp)
-    )
-
-    target_rpm = target_rpm[
-        target_valid_mask
-    ]
-
-    target_amp = target_amp[
-        target_valid_mask
-    ]
-
-    if len(target_rpm) < 2:
-        raise ValueError(
-            "Target curve contains fewer than two valid points."
-        )
-
-    target_sort_indices = np.argsort(
-        target_rpm,
-        kind="stable",
-    )
-
-    target_rpm = target_rpm[
-        target_sort_indices
-    ]
-
-    target_amp = target_amp[
-        target_sort_indices
-    ]
-
-    target_curve = np.interp(
-        rpm,
-        target_rpm,
-        target_amp,
-    )
-
-    target_at_peak_rpm = float(
-        np.interp(
-            peak_rpm,
-            target_rpm,
-            target_amp,
-        )
-    )
-
-    margin_curve = (
-        amplitude
-        - target_curve
-    )
-
-    max_margin_index = int(
-        np.argmax(
-            margin_curve
-        )
-    )
-
-    max_margin = float(
-        margin_curve[
-            max_margin_index
-        ]
-    )
-
-    target_at_max_margin = float(
-        target_curve[
-            max_margin_index
-        ]
-    )
-
-    max_margin_percent = (
-        max_margin
-        / target_at_max_margin
-        * 100.0
-        if target_at_max_margin > 0
-        else np.nan
-    )
-
-    exceedance_area = integrate_positive_area(
-        rpm,
-        margin_curve,
-    )
-
-    status = (
-        "PASS"
-        if exceedance_area <= 1e-9
-        else "FAIL"
-    )
-
-    return {
-        "Peak RPM": peak_rpm,
-        "Peak Amplitude [m/s²]": peak_amplitude,
-        "Target at Peak RPM [m/s²]": target_at_peak_rpm,
-        "Max Margin [m/s²]": max_margin,
-        "Max Margin [%]": max_margin_percent,
-        "Exceedance Area [m/s²·RPM]": exceedance_area,
-        "Status": status,
-    }
-
-
-# =============================================================================
-# AXLE WHINE ANALYSIS WRAPPER
-# =============================================================================
-
-def analyze_axle_orders(
-    time: np.ndarray,
-    rpm: np.ndarray,
-    channels: Mapping[str, np.ndarray],
-    order_definitions: Mapping[float, dict],
-    samples_per_rev: int,
-    revs_per_block: int,
-    overlap: float,
-    max_order: float,
-    order_width: float,
-    rpm_step: float,
-    calibration_factor: float
-) -> Tuple[
-    Dict[float, dict],
-    Dict[float, pd.DataFrame],
-    Dict[float, pd.DataFrame],
-]:
-    """
-    Run the Axle Whine analysis for all configured orders and channels.
-    """
-    if not isinstance(
-        channels,
-        Mapping,
-    ):
-        raise ValueError(
-            "channels must be a mapping of channel names to arrays."
-        )
-
-    if len(channels) == 0:
-        raise ValueError(
-            "At least one vibration channel is required."
-        )
-
-    highest_requested_order = max(
-        float(order_value)
-        for order_value in order_definitions.keys()
-    )
-
-    if max_order < highest_requested_order:
-        raise ValueError(
-            f"Max Order must be at least "
-            f"{highest_requested_order:.2f}."
-        )
-
-    curves_by_order: Dict[
-        float,
-        dict
-    ] = {}
-
-    results_by_order: Dict[
-        float,
-        pd.DataFrame
-    ] = {}
-
-    raw_curves_by_order: Dict[
-        float,
-        pd.DataFrame
-    ] = {}
-
-    for order_value, definition in (
-        order_definitions.items()
-    ):
-        order_value = float(
-            order_value
-        )
-
-        channel_curves = {}
-        result_rows = []
-
-        for channel_name, raw_signal in (
-            channels.items()
-        ):
-            signal = np.asarray(
-                raw_signal,
-                dtype=float,
-            )
-
-            if len(signal) != len(time):
-                raise ValueError(
-                    f"Channel {channel_name} length does not match "
-                    "the Time and RPM vectors."
-                )
-
-            theta_uniform, signal_uniform, rpm_uniform = (
-                axle_angular_resample(
-                    time,
-                    rpm,
-                    signal,
-                    samples_per_rev=samples_per_rev,
-                )
-            )
-
-            orders, block_rpms, spectrum = (
-                axle_order_map(
-                    theta_uniform,
-                    signal_uniform,
-                    rpm_uniform,
-                    samples_per_rev=samples_per_rev,
-                    revs_per_block=revs_per_block,
-                    overlap=overlap,
-                    max_order=max_order,
-                )
-            )
-
-            spectrum = np.asarray(
-                spectrum,
-                dtype=float,
-            )
-
-            if spectrum.ndim != 2:
-                raise ValueError(
-                    f"Calculated spectrum for channel {channel_name} "
-                    "is not two-dimensional."
-                )
-
-            rpm_curve, amplitude_curve = (
-                axle_extract_order_vs_rpm(
-                    orders,
-                    block_rpms,
-                    spectrum,
-                    target_order=order_value,
-                    width=order_width,
-                    rpm_step=rpm_step,
-                    smooth=True,
-                )
-            )
-
-            rpm_curve = np.asarray(
-                rpm_curve,
-                dtype=float,
-            )
-
-            amplitude_curve = (
-                np.asarray(
-                    amplitude_curve,
-                    dtype=float,
-                )
-                * calibration_factor
-            )
-
-            if len(rpm_curve) == 0:
-                raise ValueError(
-                    f"No RPM curve was generated for "
-                    f"{order_value:.2f} order, "
-                    f"channel {channel_name}."
-                )
-
-            if len(rpm_curve) != len(
-                amplitude_curve
-            ):
-                raise ValueError(
-                    f"RPM and amplitude length mismatch for "
-                    f"{order_value:.2f} order, "
-                    f"channel {channel_name}."
-                )
-
-            channel_curves[
-                channel_name
-            ] = {
-                "rpm": rpm_curve,
-                "amp": amplitude_curve,
-            }
-
-            evaluation_result = (
-                evaluate_curve_against_target(
-                    rpm=rpm_curve,
-                    amplitude=amplitude_curve,
-                    target_rpm=definition[
-                        "target_rpm"
-                    ],
-                    target_amp=definition[
-                        "target_amp"
-                    ],
-                )
-            )
-
-            result_row = {
-                "Order": order_value,
-                "Order Label": definition[
-                    "label"
-                ],
-                "Harmonic": definition[
-                    "harmonic"
-                ],
-                "Channel": channel_name,
-            }
-
-            result_row.update(
-                evaluation_result
-            )
-
-            result_rows.append(
-                result_row
-            )
-
-        if len(result_rows) == 0:
-            raise ValueError(
-                f"No results were generated for "
-                f"{order_value:.2f} order."
-            )
-
-        result_dataframe = pd.DataFrame(
-            result_rows
-        )
-
-        first_channel_name = next(
-            iter(
-                channel_curves
-            )
-        )
-
-        common_rpm = np.asarray(
-            channel_curves[
-                first_channel_name
-            ]["rpm"],
-            dtype=float,
-        )
-
-        curve_dataframe = pd.DataFrame(
-            {
-                "RPM": common_rpm
-            }
-        )
-
-        for channel_name, channel_curve in (
-            channel_curves.items()
-        ):
-            curve_dataframe[
-                channel_name
-            ] = np.interp(
-                common_rpm,
-                np.asarray(
-                    channel_curve[
-                        "rpm"
-                    ],
-                    dtype=float,
-                ),
-                np.asarray(
-                    channel_curve[
-                        "amp"
-                    ],
-                    dtype=float,
-                ),
-            )
-
-        curve_dataframe[
-            "Target"
-        ] = np.interp(
-            common_rpm,
-            np.asarray(
-                definition[
-                    "target_rpm"
-                ],
-                dtype=float,
-            ),
-            np.asarray(
-                definition[
-                    "target_amp"
-                ],
-                dtype=float,
-            ),
-        )
-
-        curves_by_order[
-            order_value
-        ] = channel_curves
-
-        results_by_order[
-            order_value
-        ] = result_dataframe
-
-        raw_curves_by_order[
-            order_value
-        ] = curve_dataframe
-
-    return (
-        curves_by_order,
-        results_by_order,
-        raw_curves_by_order,
-    )
-    # =============================================================================
-# RESULT PLOTTING
-# =============================================================================
-
-def plot_order_comparison(
-    order_label: str,
-    channel_curves: Mapping[str, dict],
-    target_rpm: Optional[np.ndarray],
-    target_amp: Optional[np.ndarray],
-    vin_number: str,
-    analysis_type: str,
-    vehicle_configuration: str
-):
-    """
-    Plot ChA, ChB and ChC order curves versus RPM.
-
-    The target curve is plotted only when it is available.
-    """
-    figure, axis = plt.subplots(
-        figsize=(12, 7)
-    )
-
-    for channel_name, curve in channel_curves.items():
-        axis.plot(
-            curve["rpm"],
-            curve["amp"],
-            label=channel_name,
-            linewidth=2,
-        )
-
-    if (
-        target_rpm is not None
-        and target_amp is not None
-    ):
-        axis.plot(
-            target_rpm,
-            target_amp,
-            label="Target Curve",
-            linewidth=4,
-        )
-
-    axis.set_xlabel(
-        "RPM"
-    )
-
-    axis.set_ylabel(
-        "Order Amplitude [m/s²]"
-    )
-
-    axis.set_title(
-        f"{order_label} vs RPM | "
-        f"VIN: {vin_number} | "
-        f"{analysis_type} | "
-        f"{vehicle_configuration}"
-    )
-
-    axis.grid(
-        True,
-        alpha=0.3,
-    )
-
-    axis.legend()
-
-    figure.tight_layout()
-
-    return figure
-
-
-def create_order_map_figure(
-    time: np.ndarray,
-    rpm: np.ndarray,
-    signal: np.ndarray,
-    selected_channel: str,
-    analysis_type: str,
-    vin_number: str,
-    samples_per_rev: int,
-    revs_per_block: int,
-    overlap: float,
-    max_order: float,
-    calibration_factor: float
-):
-    """
-    Create an Order Map / Waterfall using the selected analysis engine.
-
-    Axle Whine:
-        order_analysis.py
-
-    Transfer Case:
-        transfer_case_analysis.py
-    """
-    if (
-        analysis_type
-        == ANALYSIS_TRANSFER_CASE
-    ):
-        (
-            theta_uniform,
-            signal_uniform,
-            rpm_uniform,
-        ) = tc_angular_resample(
-            time,
-            rpm,
-            signal,
-            samples_per_rev=samples_per_rev,
-        )
-
-        (
-            orders,
-            block_rpms,
-            spectrum,
-        ) = tc_order_map(
-            theta_uniform,
-            signal_uniform,
-            rpm_uniform,
-            samples_per_rev=samples_per_rev,
-            revs_per_block=revs_per_block,
-            overlap=overlap,
-            max_order=max_order,
-        )
-
-    else:
-        (
-            theta_uniform,
-            signal_uniform,
-            rpm_uniform,
-        ) = axle_angular_resample(
-            time,
-            rpm,
-            signal,
-            samples_per_rev=samples_per_rev,
-        )
-
-        (
-            orders,
-            block_rpms,
-            spectrum,
-        ) = axle_order_map(
-            theta_uniform,
-            signal_uniform,
-            rpm_uniform,
-            samples_per_rev=samples_per_rev,
-            revs_per_block=revs_per_block,
-            overlap=overlap,
-            max_order=max_order,
-        )
-
-    orders = np.asarray(
-        orders,
-        dtype=float,
-    )
-
-    block_rpms = np.asarray(
-        block_rpms,
-        dtype=float,
-    )
-
-    spectrum = np.asarray(
-        spectrum,
-        dtype=float,
-    )
-
-    if spectrum.ndim != 2:
-        raise ValueError(
-            "Order spectrum must be two-dimensional."
-        )
-
-    if spectrum.shape[0] != len(block_rpms):
-        raise ValueError(
-            "Order spectrum row count does not match the RPM vector."
-        )
-
-    if spectrum.shape[1] != len(orders):
-        raise ValueError(
-            "Order spectrum column count does not match the order axis."
-        )
-
-    sort_indices = np.argsort(
-        block_rpms,
-        kind="stable",
-    )
-
-    sorted_rpms = block_rpms[
-        sort_indices
-    ]
-
-    sorted_spectrum = spectrum[
-        sort_indices,
-        :
-    ]
-
-    decibel_spectrum = (
-        20.0
-        * np.log10(
-            np.maximum(
-                sorted_spectrum
-                * calibration_factor,
-                1e-12,
-            )
-        )
-    )
-
-    figure, axis = plt.subplots(
-        figsize=(12, 7)
-    )
-
-    image = axis.imshow(
-        decibel_spectrum,
-        aspect="auto",
-        origin="lower",
-        extent=[
-            float(orders[0]),
-            float(orders[-1]),
-            float(sorted_rpms[0]),
-            float(sorted_rpms[-1]),
-        ],
-        interpolation="nearest",
-        cmap="jet",
-    )
-
-    figure.colorbar(
-        image,
-        ax=axis,
-        label="Amplitude [dB re 1 m/s²]",
-    )
-
-    axis.set_xlabel(
-        "Order"
-    )
-
-    axis.set_ylabel(
-        "RPM"
-    )
-
-    axis.set_title(
-        f"Order Map / Waterfall - "
-        f"{selected_channel} | "
-        f"VIN: {vin_number} | "
-        f"{analysis_type}"
-    )
-
-    figure.tight_layout()
-
-    return figure
-
-
-# =============================================================================
-# EXCEL SHEET FORMATTING
-# =============================================================================
-
-def format_comparison_sheet(
-    writer,
-    sheet_name: str
-) -> None:
-    """
-    Format a comparison sheet and highlight PASS, FAIL and INFO rows.
-    """
-    worksheet = writer.book[
-        sheet_name
-    ]
-
-    header_fill = PatternFill(
-        start_color="D9EAF7",
-        end_color="D9EAF7",
-        fill_type="solid",
-    )
-
-    pass_fill = PatternFill(
-        start_color="C6EFCE",
-        end_color="C6EFCE",
-        fill_type="solid",
-    )
-
-    fail_fill = PatternFill(
-        start_color="FFC7CE",
-        end_color="FFC7CE",
-        fill_type="solid",
-    )
-
-    info_fill = PatternFill(
-        start_color="D9EAF7",
-        end_color="D9EAF7",
-        fill_type="solid",
-    )
-
-    for cell in worksheet[1]:
-        cell.font = Font(
-            bold=True
-        )
-
-        cell.fill = header_fill
-
-    status_column = None
-
-    for cell in worksheet[1]:
-        if cell.value == "Status":
-            status_column = cell.column
-            break
-
-    if status_column is not None:
-        for row_index in range(
-            2,
-            worksheet.max_row + 1,
-        ):
-            status_value = worksheet.cell(
-                row=row_index,
-                column=status_column,
-            ).value
-
-            if status_value == "PASS":
-                row_fill = pass_fill
-
-            elif status_value == "FAIL":
-                row_fill = fail_fill
-
-            elif status_value == "INFO":
-                row_fill = info_fill
-
-            else:
-                row_fill = None
-
-            if row_fill is not None:
-                for column_index in range(
-                    1,
-                    worksheet.max_column + 1,
-                ):
-                    worksheet.cell(
-                        row=row_index,
-                        column=column_index,
-                    ).fill = row_fill
-
-    for column_cells in worksheet.columns:
-        column_letter = (
-            column_cells[0]
-            .column_letter
-        )
-
-        worksheet.column_dimensions[
-            column_letter
-        ].width = 22
-
-
-def format_curve_sheet(
-    writer,
-    sheet_name: str
-) -> None:
-    """
-    Format a raw curve sheet.
-    """
-    worksheet = writer.book[
-        sheet_name
-    ]
-
-    header_fill = PatternFill(
-        start_color="D9EAF7",
-        end_color="D9EAF7",
-        fill_type="solid",
-    )
-
-    for cell in worksheet[1]:
-        cell.font = Font(
-            bold=True
-        )
-
-        cell.fill = header_fill
-
-    for column_cells in worksheet.columns:
-        column_letter = (
-            column_cells[0]
-            .column_letter
-        )
-
-        worksheet.column_dimensions[
-            column_letter
-        ].width = 16
-
-
-# =============================================================================
-# EXCEL CURVE PLOT
-# =============================================================================
-
-def create_curve_plot_png(
-    curve_dataframe: pd.DataFrame,
-    order_label: str,
-    vin_number: str,
-    analysis_type: str,
-    vehicle_configuration: str
-) -> BytesIO:
-    """
-    Create an order-vs-RPM PNG image for embedding in Excel.
-    """
-    figure, axis = plt.subplots(
-        figsize=(14, 8)
-    )
-
-    for channel_name in CHANNEL_NAMES:
-        if (
-            channel_name
-            in curve_dataframe.columns
-        ):
-            axis.plot(
-                curve_dataframe["RPM"],
-                curve_dataframe[channel_name],
-                label=channel_name,
-                linewidth=2,
-            )
-
-    if (
-        "Target"
-        in curve_dataframe.columns
-    ):
-        axis.plot(
-            curve_dataframe["RPM"],
-            curve_dataframe["Target"],
-            label="Target Curve",
-            linewidth=5,
-        )
-
-    axis.set_title(
-        f"{order_label} vs RPM | "
-        f"VIN: {vin_number} | "
-        f"{analysis_type} | "
-        f"{vehicle_configuration}",
-        fontsize=16,
-    )
-
-    axis.set_xlabel(
-        "RPM",
-        fontsize=13,
-    )
-
-    axis.set_ylabel(
-        "Order Amplitude [m/s²]",
-        fontsize=13,
-    )
-
-    axis.grid(
-        True,
-        alpha=0.3,
-    )
-
-    axis.legend(
-        loc="upper right",
-        fontsize=12,
-    )
-
-    rpm_minimum = min(
-        1000.0,
-        float(
-            curve_dataframe[
-                "RPM"
-            ].min()
-        ),
-    )
-
-    rpm_maximum = max(
-        4500.0,
-        float(
-            curve_dataframe[
-                "RPM"
-            ].max()
-        ),
-    )
-
-    axis.set_xlim(
-        rpm_minimum,
-        rpm_maximum,
-    )
-
-    figure.tight_layout()
-
-    image_buffer = BytesIO()
-
-    figure.savefig(
-        image_buffer,
-        format="png",
-        dpi=180,
-        bbox_inches="tight",
-    )
-
-    plt.close(
-        figure
-    )
-
-    image_buffer.seek(
-        0
-    )
-
-    return image_buffer
-
-
-def add_curve_plot_to_sheet(
-    writer,
-    sheet_name: str,
-    curve_dataframe: pd.DataFrame,
-    order_label: str,
-    vin_number: str,
-    analysis_type: str,
-    vehicle_configuration: str
-) -> None:
-    """
-    Add the calculated order curve PNG to an Excel worksheet.
-    """
-    worksheet = writer.book[
-        sheet_name
-    ]
-
-    image_buffer = create_curve_plot_png(
-        curve_dataframe=curve_dataframe,
-        order_label=order_label,
-        vin_number=vin_number,
-        analysis_type=analysis_type,
-        vehicle_configuration=vehicle_configuration,
-    )
-
-    excel_image = XLImage(
-        image_buffer
-    )
-
-    excel_image.width = 900
-    excel_image.height = 520
-
-    worksheet.add_image(
-        excel_image,
-        "G2",
-    )
-
-
-# =============================================================================
-# EXCEL REPORT GENERATION
-# =============================================================================
-
-def make_excel_report(
-    vehicle_information: dict,
-    results_by_order: Mapping[
-        float,
-        pd.DataFrame
-    ],
-    curves_by_order: Mapping[
-        float,
-        pd.DataFrame
-    ],
-    order_definitions: Mapping[
-        float,
-        dict
-    ]
-) -> BytesIO:
-    """
-    Create the complete Excel report.
-
-    Sheets:
-        Vehicle Info
-        One comparison sheet per order
-        One curve-data sheet per order
-        Embedded PNG plot in every curve sheet
-    """
-    output = BytesIO()
-
-    vin_number = vehicle_information[
-        "VIN"
-    ]
-
-    analysis_type = vehicle_information[
-        "Analysis Type"
-    ]
-
-    vehicle_configuration = vehicle_information[
-        "Vehicle Configuration"
-    ]
-
-    with pd.ExcelWriter(
-        output,
-        engine="openpyxl",
-    ) as writer:
-        pd.DataFrame(
-            [
-                vehicle_information
-            ]
-        ).to_excel(
-            writer,
-            sheet_name="Vehicle Info",
-            index=False,
-        )
-
-        for order_value, result_dataframe in (
-            results_by_order.items()
-        ):
-            comparison_sheet_name = (
-                f"{str(order_value).replace('.', '_')} "
-                f"Comparison"
-            )[:31]
-
-            result_dataframe.to_excel(
-                writer,
-                sheet_name=comparison_sheet_name,
-                index=False,
-            )
-
-            format_comparison_sheet(
-                writer,
-                comparison_sheet_name,
-            )
-
-        for order_value, curve_dataframe in (
-            curves_by_order.items()
-        ):
-            curve_sheet_name = (
-                f"{str(order_value).replace('.', '_')} "
-                f"Curves"
-            )[:31]
-
-            curve_dataframe.to_excel(
-                writer,
-                sheet_name=curve_sheet_name,
-                index=False,
-            )
-
-            format_curve_sheet(
-                writer,
-                curve_sheet_name,
-            )
-
-            add_curve_plot_to_sheet(
-                writer=writer,
-                sheet_name=curve_sheet_name,
-                curve_dataframe=curve_dataframe,
-                order_label=order_definitions[
-                    order_value
-                ]["label"],
-                vin_number=vin_number,
-                analysis_type=analysis_type,
-                vehicle_configuration=vehicle_configuration,
-            )
-
-    output.seek(
-        0
-    )
-# =============================================================================
-# USER INTERFACE
-# =============================================================================
-
-def render_section_title(
-    title: str,
-    subtitle: Optional[str] = None,
-) -> None:
-    """
-    Render a corporate section heading.
-    """
-    subtitle_html = ""
-
-    if subtitle:
-        subtitle_html = (
-            f'<div style="'
-            f'color:#6b7d8d;'
-            f'font-size:0.88rem;'
-            f'margin-top:3px;'
-            f'">{subtitle}</div>'
-        )
-
     st.markdown(
-        f"""
-<div class="section-title">
-    {title}
-    {subtitle_html}
-</div>
-""",
+        f'<div class="section-title">{title}{subtitle_html}</div>',
         unsafe_allow_html=True,
     )
 
 
-def clear_analysis_session_state() -> None:
-    """
-    Clear previous analysis results when an input changes.
-    """
-    state_keys_to_clear = [
+def build_axle_order_definitions(
+    fuel_type: str,
+    axle_type: str,
+) -> Dict[float, dict]:
+    target = AXLE_TARGETS[fuel_type][axle_type]
+    return {
+        10.0: {
+            "label": "10th Order",
+            "harmonic": "Base",
+            "target_rpm": target["rpm"],
+            "target_amp": target["amp"],
+        },
+        20.0: {
+            "label": "20th Order",
+            "harmonic": "2nd",
+            "target_rpm": target["rpm"],
+            "target_amp": target["amp"],
+        },
+    }
+
+
+def clear_result_state() -> None:
+    result_keys = [
         "analysis_completed",
         "analysis_type_result",
         "time_result",
@@ -2223,122 +376,693 @@ def clear_analysis_session_state() -> None:
         "vehicle_information",
         "vin_result",
     ]
-
-    for state_key in state_keys_to_clear:
-        if state_key in st.session_state:
-            del st.session_state[state_key]
+    for key in result_keys:
+        st.session_state.pop(key, None)
 
 
 def build_input_signature(
-    vin_value: str,
-    selected_analysis: str,
-    selected_fuel: str,
-    selected_axle: str,
-    uploaded_measurement_file,
-    selected_max_order: float,
-    selected_order_width: float,
-    selected_map_channel: str,
+    vin: str,
+    analysis_type: str,
+    fuel_type: str,
+    axle_type: str,
+    uploaded_file,
+    max_order: float,
+    order_width: float,
+    selected_channel: str,
 ) -> tuple:
-    """
-    Build a signature representing the current UI inputs.
-    """
-    if uploaded_measurement_file is None:
-        file_name = None
-        file_size = None
-    else:
-        file_name = str(
-            uploaded_measurement_file.name
-        )
-
-        file_size = int(
-            uploaded_measurement_file.size
-        )
-
+    file_name = None if uploaded_file is None else uploaded_file.name
+    file_size = None if uploaded_file is None else int(uploaded_file.size)
     return (
-        vin_value,
-        selected_analysis,
-        selected_fuel,
-        selected_axle,
+        vin,
+        analysis_type,
+        fuel_type,
+        axle_type,
         file_name,
         file_size,
-        float(selected_max_order),
-        float(selected_order_width),
-        selected_map_channel,
+        float(max_order),
+        float(order_width),
+        selected_channel,
     )
 
 
+def convert_csv_g_to_ms2_if_needed(
+    headers: list,
+    data: np.ndarray,
+) -> Tuple[np.ndarray, list]:
+    converted_channels = []
+    if len(headers) < 4:
+        return data, converted_channels
+
+    for column_index in (1, 2, 3):
+        header = str(headers[column_index]).strip().lower()
+        is_g_unit = (
+            "(g)" in header
+            or "[g]" in header
+            or header.endswith(" g")
+        )
+        if is_g_unit:
+            data[:, column_index] *= G_TO_MS2
+            converted_channels.append(str(headers[column_index]))
+
+    return data, converted_channels
+
+
+def load_measurement_file(
+    uploaded_file,
+    analysis_type: str,
+) -> Tuple[list, np.ndarray]:
+    if uploaded_file is None:
+        raise ValueError("No measurement file was uploaded.")
+
+    if uploaded_file.size > MAX_FILE_SIZE_MB * 1024 * 1024:
+        raise ValueError(
+            f"File exceeds the maximum allowed size of {MAX_FILE_SIZE_MB} MB."
+        )
+
+    extension = uploaded_file.name.rsplit(".", 1)[-1].lower()
+    converted_channels = []
+
+    if extension == "xlsx":
+        temporary_path = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                delete=False,
+                suffix=".xlsx",
+            ) as temporary_file:
+                temporary_file.write(uploaded_file.getvalue())
+                temporary_path = temporary_file.name
+
+            if analysis_type == ANALYSIS_TRANSFER_CASE:
+                headers, data = tc_read_xlsx_numeric(temporary_path)
+            else:
+                headers, data = axle_read_xlsx_numeric(temporary_path)
+        finally:
+            if temporary_path and os.path.exists(temporary_path):
+                try:
+                    os.remove(temporary_path)
+                except OSError:
+                    pass
+
+    elif extension == "csv":
+        uploaded_file.seek(0)
+        dataframe = pd.read_csv(
+            uploaded_file,
+            sep=None,
+            engine="python",
+        )
+        headers = list(dataframe.columns)
+        try:
+            data = dataframe.to_numpy(dtype=float)
+        except (TypeError, ValueError) as error:
+            raise ValueError(
+                "CSV contains non-numeric values in the measurement columns."
+            ) from error
+
+        data, converted_channels = convert_csv_g_to_ms2_if_needed(
+            headers,
+            data,
+        )
+    else:
+        raise ValueError(
+            "Unsupported file format. Please upload an XLSX or CSV file."
+        )
+
+    data = np.asarray(data, dtype=float)
+
+    if data.ndim != 2 or data.shape[1] < 5:
+        raise ValueError(
+            "The file must contain at least five columns in this order: "
+            "Time, ChA, ChB, ChC, RPM."
+        )
+
+    if data.shape[0] < 10:
+        raise ValueError("The measurement file is too short for order analysis.")
+
+    if data.shape[0] > MAX_ROWS:
+        raise ValueError(
+            f"The dataset exceeds the maximum row limit of {MAX_ROWS:,}."
+        )
+
+    if not np.all(np.isfinite(data[:, :5])):
+        raise ValueError(
+            "The first five columns contain NaN, infinite or non-numeric values."
+        )
+
+    if np.any(np.diff(data[:, 0]) < 0):
+        raise ValueError("Time values must not decrease.")
+
+    if np.any(data[:, 4] <= 0):
+        raise ValueError("RPM values must be positive.")
+
+    if converted_channels:
+        st.info(
+            "CSV channels converted from g to m/s²: "
+            + ", ".join(converted_channels)
+        )
+
+    return headers, data
+
+
+def integrate_positive_area(
+    rpm: np.ndarray,
+    difference: np.ndarray,
+) -> float:
+    rpm = np.asarray(rpm, dtype=float)
+    difference = np.asarray(difference, dtype=float)
+    positive = np.maximum(difference, 0.0)
+
+    if hasattr(np, "trapezoid"):
+        return float(np.trapezoid(positive, rpm))
+
+    return float(np.trapz(positive, rpm))
+
+
+def evaluate_curve_against_target(
+    rpm: np.ndarray,
+    amplitude: np.ndarray,
+    target_rpm: Optional[np.ndarray],
+    target_amp: Optional[np.ndarray],
+) -> dict:
+    rpm = np.asarray(rpm, dtype=float)
+    amplitude = np.asarray(amplitude, dtype=float)
+
+    if len(rpm) == 0 or len(amplitude) == 0:
+        raise ValueError("No valid order curve was generated.")
+
+    peak_index = int(np.argmax(amplitude))
+    peak_rpm = float(rpm[peak_index])
+    peak_amplitude = float(amplitude[peak_index])
+
+    if target_rpm is None or target_amp is None:
+        return {
+            "Peak RPM": peak_rpm,
+            "Peak Amplitude [m/s²]": peak_amplitude,
+            "Target at Peak RPM [m/s²]": np.nan,
+            "Max Margin [m/s²]": np.nan,
+            "Max Margin [%]": np.nan,
+            "Exceedance Area [m/s²·RPM]": np.nan,
+            "Status": "INFO",
+        }
+
+    target_curve = np.interp(rpm, target_rpm, target_amp)
+    margin_curve = amplitude - target_curve
+    margin_index = int(np.argmax(margin_curve))
+    target_at_margin = float(target_curve[margin_index])
+    max_margin = float(margin_curve[margin_index])
+
+    return {
+        "Peak RPM": peak_rpm,
+        "Peak Amplitude [m/s²]": peak_amplitude,
+        "Target at Peak RPM [m/s²]": float(
+            np.interp(peak_rpm, target_rpm, target_amp)
+        ),
+        "Max Margin [m/s²]": max_margin,
+        "Max Margin [%]": (
+            max_margin / target_at_margin * 100.0
+            if target_at_margin > 0
+            else np.nan
+        ),
+        "Exceedance Area [m/s²·RPM]": integrate_positive_area(
+            rpm,
+            margin_curve,
+        ),
+        "Status": (
+            "PASS"
+            if integrate_positive_area(rpm, margin_curve) <= 1e-9
+            else "FAIL"
+        ),
+    }
+
+
 # =============================================================================
-# WORKFLOW INDICATOR
+# AXLE ANALYSIS WRAPPER
 # =============================================================================
 
-workflow_columns = st.columns(
-    4
-)
+def analyze_axle_orders(
+    time: np.ndarray,
+    rpm: np.ndarray,
+    channels: Mapping[str, np.ndarray],
+    order_definitions: Mapping[float, dict],
+    samples_per_rev: int,
+    revs_per_block: int,
+    overlap: float,
+    max_order: float,
+    order_width: float,
+    rpm_step: float,
+    calibration_factor: float,
+) -> Tuple[
+    Dict[float, dict],
+    Dict[float, pd.DataFrame],
+    Dict[float, pd.DataFrame],
+]:
+    highest_order = max(float(order_value) for order_value in order_definitions)
+    if max_order < highest_order:
+        raise ValueError(
+            f"Max Order must be at least {highest_order:.2f}."
+        )
 
-workflow_steps = [
-    ("01", "Vehicle"),
-    ("02", "Measurement"),
-    ("03", "Configuration"),
-    ("04", "Results"),
-]
+    curves_by_order: Dict[float, dict] = {}
+    results_by_order: Dict[float, pd.DataFrame] = {}
+    raw_curves_by_order: Dict[float, pd.DataFrame] = {}
 
-for workflow_column, (
-    step_number,
-    step_name,
-) in zip(
-    workflow_columns,
-    workflow_steps,
+    for order_value, definition in order_definitions.items():
+        order_value = float(order_value)
+        channel_curves = {}
+        result_rows = []
+
+        for channel_name, signal in channels.items():
+            theta_u, signal_u, rpm_u = axle_angular_resample(
+                time,
+                rpm,
+                np.asarray(signal, dtype=float),
+                samples_per_rev=samples_per_rev,
+            )
+
+            orders, block_rpms, spectrum = axle_order_map(
+                theta_u,
+                signal_u,
+                rpm_u,
+                samples_per_rev=samples_per_rev,
+                revs_per_block=revs_per_block,
+                overlap=overlap,
+                max_order=max_order,
+            )
+
+            rpm_curve, amplitude_curve = axle_extract_order_vs_rpm(
+                orders,
+                block_rpms,
+                spectrum,
+                target_order=order_value,
+                width=order_width,
+                rpm_step=rpm_step,
+                smooth=True,
+            )
+
+            rpm_curve = np.asarray(rpm_curve, dtype=float)
+            amplitude_curve = (
+                np.asarray(amplitude_curve, dtype=float)
+                * calibration_factor
+            )
+
+            channel_curves[channel_name] = {
+                "rpm": rpm_curve,
+                "amp": amplitude_curve,
+            }
+
+            evaluation = evaluate_curve_against_target(
+                rpm_curve,
+                amplitude_curve,
+                definition["target_rpm"],
+                definition["target_amp"],
+            )
+
+            result_rows.append(
+                {
+                    "Order": order_value,
+                    "Order Label": definition["label"],
+                    "Harmonic": definition["harmonic"],
+                    "Channel": channel_name,
+                    **evaluation,
+                }
+            )
+
+        result_dataframe = pd.DataFrame(result_rows)
+        first_curve = next(iter(channel_curves.values()))
+        common_rpm = np.asarray(first_curve["rpm"], dtype=float)
+        curve_dataframe = pd.DataFrame({"RPM": common_rpm})
+
+        for channel_name, curve in channel_curves.items():
+            curve_dataframe[channel_name] = np.interp(
+                common_rpm,
+                curve["rpm"],
+                curve["amp"],
+            )
+
+        curve_dataframe["Target"] = np.interp(
+            common_rpm,
+            definition["target_rpm"],
+            definition["target_amp"],
+        )
+
+        curves_by_order[order_value] = channel_curves
+        results_by_order[order_value] = result_dataframe
+        raw_curves_by_order[order_value] = curve_dataframe
+
+    return curves_by_order, results_by_order, raw_curves_by_order
+
+
+# =============================================================================
+# PLOTTING
+# =============================================================================
+
+def plot_order_comparison(
+    order_label: str,
+    channel_curves: Mapping[str, dict],
+    target_rpm: Optional[np.ndarray],
+    target_amp: Optional[np.ndarray],
+    vin: str,
+    analysis_type: str,
+    vehicle_configuration: str,
 ):
-    with workflow_column:
+    figure, axis = plt.subplots(figsize=(12, 7))
+
+    for channel_name, curve in channel_curves.items():
+        axis.plot(
+            curve["rpm"],
+            curve["amp"],
+            label=channel_name,
+            linewidth=2,
+        )
+
+    if target_rpm is not None and target_amp is not None:
+        axis.plot(
+            target_rpm,
+            target_amp,
+            label="Target Curve",
+            linewidth=4,
+        )
+
+    axis.set_xlabel("RPM")
+    axis.set_ylabel("Order Amplitude [m/s²]")
+    axis.set_title(
+        f"{order_label} vs RPM | VIN: {vin} | "
+        f"{analysis_type} | {vehicle_configuration}"
+    )
+    axis.grid(True, alpha=0.3)
+    axis.legend()
+    figure.tight_layout()
+    return figure
+
+
+def create_order_map_figure(
+    time: np.ndarray,
+    rpm: np.ndarray,
+    signal: np.ndarray,
+    selected_channel: str,
+    analysis_type: str,
+    vin: str,
+    samples_per_rev: int,
+    revs_per_block: int,
+    overlap: float,
+    max_order: float,
+    calibration_factor: float,
+):
+    engine_angular_resample = (
+        tc_angular_resample
+        if analysis_type == ANALYSIS_TRANSFER_CASE
+        else axle_angular_resample
+    )
+    engine_order_map = (
+        tc_order_map
+        if analysis_type == ANALYSIS_TRANSFER_CASE
+        else axle_order_map
+    )
+
+    theta_u, signal_u, rpm_u = engine_angular_resample(
+        time,
+        rpm,
+        signal,
+        samples_per_rev=samples_per_rev,
+    )
+
+    orders, block_rpms, spectrum = engine_order_map(
+        theta_u,
+        signal_u,
+        rpm_u,
+        samples_per_rev=samples_per_rev,
+        revs_per_block=revs_per_block,
+        overlap=overlap,
+        max_order=max_order,
+    )
+
+    orders = np.asarray(orders, dtype=float)
+    block_rpms = np.asarray(block_rpms, dtype=float)
+    spectrum = np.asarray(spectrum, dtype=float)
+
+    if spectrum.ndim != 2:
+        raise ValueError("Order spectrum must be two-dimensional.")
+
+    sort_index = np.argsort(block_rpms)
+    sorted_rpm = block_rpms[sort_index]
+    sorted_spectrum = spectrum[sort_index, :]
+
+    decibels = 20.0 * np.log10(
+        np.maximum(
+            sorted_spectrum * calibration_factor,
+            1e-12,
+        )
+    )
+
+    figure, axis = plt.subplots(figsize=(12, 7))
+    image = axis.imshow(
+        decibels,
+        aspect="auto",
+        origin="lower",
+        extent=[
+            float(orders[0]),
+            float(orders[-1]),
+            float(sorted_rpm[0]),
+            float(sorted_rpm[-1]),
+        ],
+        interpolation="nearest",
+        cmap="jet",
+    )
+
+    figure.colorbar(
+        image,
+        ax=axis,
+        label="Amplitude [dB re 1 m/s²]",
+    )
+    axis.set_xlabel("Order")
+    axis.set_ylabel("RPM")
+    axis.set_title(
+        f"Order Map / Waterfall - {selected_channel} | "
+        f"VIN: {vin} | {analysis_type}"
+    )
+    figure.tight_layout()
+    return figure
+
+
+# =============================================================================
+# EXCEL REPORT
+# =============================================================================
+
+def format_comparison_sheet(writer, sheet_name: str) -> None:
+    worksheet = writer.book[sheet_name]
+
+    fills = {
+        "PASS": PatternFill(
+            start_color="C6EFCE",
+            end_color="C6EFCE",
+            fill_type="solid",
+        ),
+        "FAIL": PatternFill(
+            start_color="FFC7CE",
+            end_color="FFC7CE",
+            fill_type="solid",
+        ),
+        "INFO": PatternFill(
+            start_color="D9EAF7",
+            end_color="D9EAF7",
+            fill_type="solid",
+        ),
+    }
+
+    header_fill = PatternFill(
+        start_color="D9EAF7",
+        end_color="D9EAF7",
+        fill_type="solid",
+    )
+
+    for cell in worksheet[1]:
+        cell.font = Font(bold=True)
+        cell.fill = header_fill
+
+    status_column = next(
+        (
+            cell.column
+            for cell in worksheet[1]
+            if cell.value == "Status"
+        ),
+        None,
+    )
+
+    if status_column is not None:
+        for row_index in range(2, worksheet.max_row + 1):
+            status = worksheet.cell(
+                row=row_index,
+                column=status_column,
+            ).value
+            row_fill = fills.get(status)
+            if row_fill is not None:
+                for column_index in range(1, worksheet.max_column + 1):
+                    worksheet.cell(
+                        row=row_index,
+                        column=column_index,
+                    ).fill = row_fill
+
+    for column_cells in worksheet.columns:
+        worksheet.column_dimensions[
+            column_cells[0].column_letter
+        ].width = 22
+
+
+def format_curve_sheet(writer, sheet_name: str) -> None:
+    worksheet = writer.book[sheet_name]
+    header_fill = PatternFill(
+        start_color="D9EAF7",
+        end_color="D9EAF7",
+        fill_type="solid",
+    )
+
+    for cell in worksheet[1]:
+        cell.font = Font(bold=True)
+        cell.fill = header_fill
+
+    for column_cells in worksheet.columns:
+        worksheet.column_dimensions[
+            column_cells[0].column_letter
+        ].width = 16
+
+
+def create_curve_plot_png(
+    curve_dataframe: pd.DataFrame,
+    order_label: str,
+    vin: str,
+    analysis_type: str,
+    vehicle_configuration: str,
+) -> BytesIO:
+    figure, axis = plt.subplots(figsize=(14, 8))
+
+    for channel_name in CHANNEL_NAMES:
+        if channel_name in curve_dataframe.columns:
+            axis.plot(
+                curve_dataframe["RPM"],
+                curve_dataframe[channel_name],
+                label=channel_name,
+                linewidth=2,
+            )
+
+    if "Target" in curve_dataframe.columns:
+        axis.plot(
+            curve_dataframe["RPM"],
+            curve_dataframe["Target"],
+            label="Target Curve",
+            linewidth=5,
+        )
+
+    axis.set_title(
+        f"{order_label} vs RPM | VIN: {vin} | "
+        f"{analysis_type} | {vehicle_configuration}",
+        fontsize=16,
+    )
+    axis.set_xlabel("RPM", fontsize=13)
+    axis.set_ylabel("Order Amplitude [m/s²]", fontsize=13)
+    axis.grid(True, alpha=0.3)
+    axis.legend(loc="upper right", fontsize=12)
+    figure.tight_layout()
+
+    image_buffer = BytesIO()
+    figure.savefig(
+        image_buffer,
+        format="png",
+        dpi=180,
+        bbox_inches="tight",
+    )
+    plt.close(figure)
+    image_buffer.seek(0)
+    return image_buffer
+
+
+def make_excel_report(
+    vehicle_information: dict,
+    results_by_order: Mapping[float, pd.DataFrame],
+    curves_by_order: Mapping[float, pd.DataFrame],
+    order_definitions: Mapping[float, dict],
+) -> BytesIO:
+    output = BytesIO()
+
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        pd.DataFrame([vehicle_information]).to_excel(
+            writer,
+            sheet_name="Vehicle Info",
+            index=False,
+        )
+
+        for order_value, result_dataframe in results_by_order.items():
+            comparison_sheet = (
+                f"{str(order_value).replace('.', '_')} Comparison"
+            )[:31]
+            result_dataframe.to_excel(
+                writer,
+                sheet_name=comparison_sheet,
+                index=False,
+            )
+            format_comparison_sheet(writer, comparison_sheet)
+
+        for order_value, curve_dataframe in curves_by_order.items():
+            curve_sheet = (
+                f"{str(order_value).replace('.', '_')} Curves"
+            )[:31]
+            curve_dataframe.to_excel(
+                writer,
+                sheet_name=curve_sheet,
+                index=False,
+            )
+            format_curve_sheet(writer, curve_sheet)
+
+            image_buffer = create_curve_plot_png(
+                curve_dataframe=curve_dataframe,
+                order_label=order_definitions[order_value]["label"],
+                vin=vehicle_information["VIN"],
+                analysis_type=vehicle_information["Analysis Type"],
+                vehicle_configuration=vehicle_information[
+                    "Vehicle Configuration"
+                ],
+            )
+
+            image = XLImage(image_buffer)
+            image.width = 900
+            image.height = 520
+            writer.book[curve_sheet].add_image(image, "G2")
+
+    output.seek(0)
+    return output
+
+
+# =============================================================================
+# UI
+# =============================================================================
+
+workflow_columns = st.columns(4)
+for column, (number, name) in zip(
+    workflow_columns,
+    [
+        ("01", "Vehicle"),
+        ("02", "Measurement"),
+        ("03", "Configuration"),
+        ("04", "Results"),
+    ],
+):
+    with column:
         st.markdown(
             f"""
-<div style="
-    background:#ffffff;
-    border:1px solid #dfe5ea;
-    border-radius:12px;
-    padding:12px 14px;
-    margin-bottom:12px;
-    box-shadow:0 3px 10px rgba(17,45,72,0.04);
-">
-    <div style="
-        color:#1768a6;
-        font-weight:800;
-        font-size:0.78rem;
-        letter-spacing:0.08em;
-    ">
-        STEP {step_number}
-    </div>
-    <div style="
-        color:#18324a;
-        font-weight:700;
-        margin-top:2px;
-    ">
-        {step_name}
-    </div>
+<div class="workflow-card">
+    <div class="workflow-number">STEP {number}</div>
+    <div class="workflow-name">{name}</div>
 </div>
 """,
             unsafe_allow_html=True,
         )
 
 
-# =============================================================================
-# VEHICLE INFORMATION CARD
-# =============================================================================
-
-with st.container(
-    border=True,
-):
-    render_section_title(
+with st.container(border=True):
+    section_title(
         "Vehicle Information",
         "Identify the vehicle and select the required NVH analysis module.",
     )
 
-    (
-        vehicle_column,
-        analysis_column,
-        option_column_1,
-        option_column_2,
-    ) = st.columns(
+    vehicle_column, analysis_column, option_1, option_2 = st.columns(
         [1.15, 1.35, 1.0, 1.0]
     )
 
@@ -2347,148 +1071,93 @@ with st.container(
             "VIN Number",
             placeholder="Enter 17-character VIN",
             max_chars=17,
-            key="ui_vin_number",
+            key="vin_number",
         ).upper().strip()
 
-    vin_valid = bool(
-        re.fullmatch(
-            r"[A-Z0-9]{17}",
-            vin_number,
-        )
-    )
+    vin_valid = bool(re.fullmatch(r"[A-Z0-9]{17}", vin_number))
 
     with analysis_column:
         analysis_type = st.selectbox(
             "Analysis Type",
-            [
-                ANALYSIS_AXLE,
-                ANALYSIS_TRANSFER_CASE,
-            ],
-            key="ui_analysis_type",
+            [ANALYSIS_AXLE, ANALYSIS_TRANSFER_CASE],
             disabled=not vin_valid,
+            key="analysis_type",
         )
 
     if analysis_type == ANALYSIS_AXLE:
-        with option_column_1:
+        with option_1:
             fuel_type = st.selectbox(
                 "Fuel Type",
-                [
-                    "Select fuel type",
-                    "Diesel",
-                    "Gasoline",
-                ],
-                key="ui_fuel_type",
+                ["Select fuel type", "Diesel", "Gasoline"],
                 disabled=not vin_valid,
+                key="fuel_type",
             )
 
-        with option_column_2:
+        with option_2:
             axle_type = st.selectbox(
                 "Axle Type",
-                [
-                    "Select axle type",
-                    "Front Axle",
-                    "Rear Axle",
-                ],
-                key="ui_axle_type",
+                ["Select axle type", "Front Axle", "Rear Axle"],
                 disabled=not vin_valid,
+                key="axle_type",
             )
 
-        vehicle_configuration = (
-            f"{fuel_type} | {axle_type}"
-        )
+        vehicle_configuration = f"{fuel_type} | {axle_type}"
 
     else:
         fuel_type = "N/A"
+        axle_type = "Transfer Case / 6th Gear"
+        vehicle_configuration = "Transfer Case | 6th Gear"
 
-        axle_type = (
-            "Transfer Case / 6th Gear"
-        )
-
-        vehicle_configuration = (
-            "Transfer Case | 6th Gear"
-        )
-
-        with option_column_1:
+        with option_1:
             st.text_input(
                 "Gear",
                 value="6th Gear",
-                key="ui_tc_gear",
                 disabled=True,
+                key="tc_gear",
             )
 
-        with option_column_2:
+        with option_2:
             st.text_input(
                 "Component",
                 value="Transfer Case",
-                key="ui_tc_component",
                 disabled=True,
+                key="tc_component",
             )
 
     if vin_number and not vin_valid:
         st.error(
             "VIN must contain exactly 17 letters or numbers."
         )
-
     elif vin_valid:
-        st.success(
-            "Vehicle identification completed."
-        )
+        st.success("Vehicle identification completed.")
 
 
-# =============================================================================
-# MEASUREMENT DATA CARD
-# =============================================================================
-
-with st.container(
-    border=True,
-):
-    render_section_title(
+with st.container(border=True):
+    section_title(
         "Measurement Data",
         "Upload Time, ChA, ChB, ChC and RPM measurement data.",
     )
 
-    upload_column, file_information_column = st.columns(
-        [1.7, 1.0]
-    )
+    upload_column, structure_column = st.columns([1.7, 1.0])
 
     with upload_column:
         uploaded_file = st.file_uploader(
             "Upload Measurement File",
-            type=[
-                "xlsx",
-                "csv",
-            ],
-            key="ui_measurement_file",
+            type=["xlsx", "csv"],
             disabled=not vin_valid,
+            key="measurement_file",
             help=(
-                "Supported file types: XLSX and CSV. "
                 "Expected first five columns: "
                 "Time, ChA, ChB, ChC, RPM."
             ),
         )
 
-    with file_information_column:
+    with structure_column:
         st.markdown(
             """
-<div style="
-    background:#f7fafc;
-    border:1px solid #dfe5ea;
-    border-radius:12px;
-    padding:16px;
-    min-height:135px;
-">
-    <div style="
-        color:#18324a;
-        font-weight:700;
-        margin-bottom:8px;
-    ">
-        Required Data Structure
-    </div>
-    <div style="
-        color:#647787;
-        font-size:0.88rem;
-        line-height:1.65;
-    ">
+<div class="info-panel">
+    <div class="info-panel-title">Required Data Structure</div>
+    <div class="info-panel-body">
         • Time [s]<br>
         • ChA vibration<br>
         • ChB vibration<br>
@@ -2501,74 +1170,28 @@ with st.container(
         )
 
     if uploaded_file is not None:
-        file_size_mb = (
-            uploaded_file.size
-            / 1024
-            / 1024
-        )
-
-        file_summary_columns = st.columns(
-            3
-        )
-
-        file_summary_columns[0].metric(
-            "File",
-            uploaded_file.name,
-        )
-
-        file_summary_columns[1].metric(
+        file_columns = st.columns(3)
+        file_columns[0].metric("File", uploaded_file.name)
+        file_columns[1].metric(
             "Format",
-            uploaded_file.name.rsplit(
-                ".",
-                1,
-            )[-1].upper(),
+            uploaded_file.name.rsplit(".", 1)[-1].upper(),
         )
-
-        file_summary_columns[2].metric(
+        file_columns[2].metric(
             "Size",
-            f"{file_size_mb:.1f} MB",
+            f"{uploaded_file.size / 1024 / 1024:.1f} MB",
         )
 
 
-# =============================================================================
-# INPUT COMPLETENESS
-# =============================================================================
-
 if analysis_type == ANALYSIS_AXLE:
-    can_continue = (
-        vin_valid
-        and fuel_type
-        != "Select fuel type"
-        and axle_type
-        != "Select axle type"
-        and uploaded_file
-        is not None
+    configuration_selected = (
+        fuel_type != "Select fuel type"
+        and axle_type != "Select axle type"
     )
 
-else:
-    can_continue = (
-        vin_valid
-        and uploaded_file
-        is not None
-    )
-
-
-# =============================================================================
-# ANALYSIS-SPECIFIC DEFAULTS
-# =============================================================================
-
-if analysis_type == ANALYSIS_AXLE:
-    if (
-        fuel_type
-        != "Select fuel type"
-        and axle_type
-        != "Select axle type"
-    ):
-        order_definitions = (
-            build_axle_order_definitions(
-                fuel_type=fuel_type,
-                axle_type=axle_type,
-            )
+    if configuration_selected:
+        order_definitions = build_axle_order_definitions(
+            fuel_type,
+            axle_type,
         )
     else:
         order_definitions = {}
@@ -2578,92 +1201,70 @@ if analysis_type == ANALYSIS_AXLE:
     fixed_overlap = 0.75
     fixed_rpm_step = 10.0
     fixed_calibration_factor = 1.0
-
     minimum_max_order = 20
     default_max_order = 30
 
 else:
-    order_definitions = (
-        TRANSFER_CASE_ORDERS
-    )
-
+    configuration_selected = True
+    order_definitions = TRANSFER_CASE_ORDERS
     fixed_samples_per_rev = 512
     fixed_revs_per_block = 20
     fixed_overlap = 0.75
     fixed_rpm_step = 10.0
     fixed_calibration_factor = 1.0
-
     minimum_max_order = 171
     default_max_order = 200
 
 
-# =============================================================================
-# ANALYSIS SETTINGS CARD
-# =============================================================================
-
-with st.container(
-    border=True,
-):
-    render_section_title(
+with st.container(border=True):
+    section_title(
         "Analysis Configuration",
         "Review the standard settings or open the advanced controls.",
     )
 
-    setting_columns = st.columns(
-        5
-    )
-
-    setting_columns[0].metric(
+    settings_columns = st.columns(5)
+    settings_columns[0].metric(
         "Samples / Rev",
         fixed_samples_per_rev,
     )
-
-    setting_columns[1].metric(
+    settings_columns[1].metric(
         "Revs / Block",
         fixed_revs_per_block,
     )
-
-    setting_columns[2].metric(
+    settings_columns[2].metric(
         "Overlap",
         f"{fixed_overlap * 100:.0f}%",
     )
-
-    setting_columns[3].metric(
+    settings_columns[3].metric(
         "RPM Step",
         f"{fixed_rpm_step:.0f}",
     )
-
-    setting_columns[4].metric(
+    settings_columns[4].metric(
         "Default Max Order",
         default_max_order,
     )
 
-    with st.expander(
-        "Advanced Analysis Settings",
-        expanded=False,
-    ):
-        advanced_column_1, advanced_column_2, advanced_column_3 = (
-            st.columns(3)
-        )
+    with st.expander("Advanced Analysis Settings", expanded=False):
+        setting_1, setting_2, setting_3 = st.columns(3)
 
-        with advanced_column_1:
+        with setting_1:
             selected_channel = st.selectbox(
                 "Order Map Channel",
                 CHANNEL_NAMES,
-                key="ui_order_map_channel",
+                key="order_map_channel",
             )
 
-        with advanced_column_2:
+        with setting_2:
             max_order = st.slider(
                 "Max Order",
                 min_value=minimum_max_order,
                 max_value=250,
                 value=default_max_order,
                 step=1,
-                key="ui_max_order",
+                key=f"max_order_{analysis_type}",
             )
 
-        with advanced_column_3:
+        with setting_3:
             order_width = st.number_input(
                 "Order Bandwidth",
                 min_value=0.05,
@@ -2671,61 +1272,49 @@ with st.container(
                 value=0.15,
                 step=0.05,
                 format="%.2f",
-                key="ui_order_width",
+                key="order_width",
             )
 
     if analysis_type == ANALYSIS_TRANSFER_CASE:
         st.info(
-            "Transfer Case analysis uses 20 revolutions per FFT block, "
-            "providing 0.05 order resolution for 85.05 and 170.10 orders."
+            "Transfer Case analysis uses 20 revolutions per FFT block "
+            "and 0.05 order resolution."
         )
 
 
-# =============================================================================
-# CURRENT CONFIGURATION SUMMARY
-# =============================================================================
+can_continue = (
+    vin_valid
+    and configuration_selected
+    and uploaded_file is not None
+)
 
-with st.container(
-    border=True,
-):
-    render_section_title(
+
+with st.container(border=True):
+    section_title(
         "Analysis Readiness",
-        "Confirm the current configuration before starting the analysis.",
+        "Confirm the current configuration before running the analysis.",
     )
 
-    readiness_columns = st.columns(
-        4
-    )
-
+    readiness_columns = st.columns(4)
     readiness_columns[0].metric(
         "VIN",
-        vin_number
-        if vin_valid
-        else "Not ready",
+        vin_number if vin_valid else "Not ready",
     )
-
     readiness_columns[1].metric(
         "Analysis",
         (
             "Axle Whine"
-            if analysis_type
-            == ANALYSIS_AXLE
+            if analysis_type == ANALYSIS_AXLE
             else "Transfer Case"
         ),
     )
-
     readiness_columns[2].metric(
         "Configuration",
         vehicle_configuration,
     )
-
     readiness_columns[3].metric(
         "Input Status",
-        (
-            "Ready"
-            if can_continue
-            else "Incomplete"
-        ),
+        "Ready" if can_continue else "Incomplete",
     )
 
     if can_continue:
@@ -2733,743 +1322,328 @@ with st.container(
             "All required inputs are available. "
             "The analysis can be started."
         )
-
     elif not vin_valid:
-        st.warning(
-            "Enter a valid 17-character VIN."
-        )
-
-    elif analysis_type == ANALYSIS_AXLE:
-        st.warning(
-            "Select the fuel type and axle type, "
-            "then upload a measurement file."
-        )
-
+        st.warning("Enter a valid 17-character VIN.")
+    elif analysis_type == ANALYSIS_AXLE and not configuration_selected:
+        st.warning("Select the fuel and axle configuration.")
     else:
-        st.warning(
-            "Upload a measurement file to continue."
-        )
+        st.warning("Upload a measurement file to continue.")
 
 
-# =============================================================================
-# SESSION STATE SAFETY
-# =============================================================================
-
-current_input_signature = build_input_signature(
-    vin_value=vin_number,
-    selected_analysis=analysis_type,
-    selected_fuel=fuel_type,
-    selected_axle=axle_type,
-    uploaded_measurement_file=uploaded_file,
-    selected_max_order=max_order,
-    selected_order_width=order_width,
-    selected_map_channel=selected_channel,
+current_signature = build_input_signature(
+    vin=vin_number,
+    analysis_type=analysis_type,
+    fuel_type=fuel_type,
+    axle_type=axle_type,
+    uploaded_file=uploaded_file,
+    max_order=max_order,
+    order_width=order_width,
+    selected_channel=selected_channel,
 )
 
-previous_input_signature = st.session_state.get(
-    "input_signature"
-)
-
+previous_signature = st.session_state.get("input_signature")
 if (
-    previous_input_signature is not None
-    and previous_input_signature
-    != current_input_signature
+    previous_signature is not None
+    and previous_signature != current_signature
 ):
-    clear_analysis_session_state()
+    clear_result_state()
 
-st.session_state[
-    "input_signature"
-] = current_input_signature
+st.session_state["input_signature"] = current_signature
 
 
 # =============================================================================
-# SYSTEM STATUS
+# RUN ANALYSIS
 # =============================================================================
 
-with st.expander(
-    "System and Module Status",
-    expanded=False,
+if st.button(
+    "Run Analysis",
+    type="primary",
+    width="stretch",
+    disabled=not can_continue,
+    key="run_analysis",
 ):
-    status_column_1, status_column_2 = st.columns(
-        2
-    )
-
-    with status_column_1:
-        st.success(
-            "Axle Whine engine: Ready"
-        )
-
-        st.success(
-            "Transfer Case engine: Ready"
-        )
-
-    with status_column_2:
-        st.write(
-            {
-                "Supported files": [
-                    "XLSX",
-                    "CSV",
-                ],
-                "Channels": CHANNEL_NAMES,
-                "CSV conversion": "g → m/s²",
-            }
-        )
-
-    st.write(
-        "Transfer Case module validation:"
-    )
-
-    st.json(
-        transfer_case_validation
-    )
-    return output
-
     try:
-        # ---------------------------------------------------------------------
-        # Load measurement data
-        # ---------------------------------------------------------------------
+        progress = st.progress(0, text="Reading measurement data...")
 
-        headers, data = load_measurement_file(
-            uploaded_file=uploaded_file,
-            analysis_type=analysis_type,
+        _, data = load_measurement_file(
+            uploaded_file,
+            analysis_type,
         )
 
-        time = np.asarray(
-            data[:, 0],
-            dtype=float,
-        )
-
-        rpm = np.asarray(
-            data[:, 4],
-            dtype=float,
-        )
-
+        time = np.asarray(data[:, 0], dtype=float)
+        rpm = np.asarray(data[:, 4], dtype=float)
         channels = {
-            "ChA": np.asarray(
-                data[:, 1],
-                dtype=float,
-            ),
-            "ChB": np.asarray(
-                data[:, 2],
-                dtype=float,
-            ),
-            "ChC": np.asarray(
-                data[:, 3],
-                dtype=float,
-            ),
+            "ChA": np.asarray(data[:, 1], dtype=float),
+            "ChB": np.asarray(data[:, 2], dtype=float),
+            "ChC": np.asarray(data[:, 3], dtype=float),
         }
 
-        # ---------------------------------------------------------------------
-        # Execute selected analysis engine
-        # ---------------------------------------------------------------------
+        progress.progress(25, text="Preparing angular-domain signals...")
 
-        with st.spinner(
-            "Analysis is running..."
-        ):
-
-            if (
-                analysis_type
-                == ANALYSIS_TRANSFER_CASE
-            ):
-                (
-                    curves_by_order,
-                    results_by_order,
-                    raw_curves_by_order,
-                ) = analyze_transfer_case_orders(
-                    time=time,
-                    rpm=rpm,
-                    channels=channels,
-                    order_definitions=order_definitions,
-                    samples_per_rev=fixed_samples_per_rev,
-                    revs_per_block=fixed_revs_per_block,
-                    overlap=fixed_overlap,
-                    max_order=max_order,
-                    order_width=order_width,
-                    rpm_step=fixed_rpm_step,
-                    calibration_factor=(
-                        fixed_calibration_factor
-                    ),
-                )
-
-            else:
-                (
-                    curves_by_order,
-                    results_by_order,
-                    raw_curves_by_order,
-                ) = analyze_axle_orders(
-                    time=time,
-                    rpm=rpm,
-                    channels=channels,
-                    order_definitions=order_definitions,
-                    samples_per_rev=fixed_samples_per_rev,
-                    revs_per_block=fixed_revs_per_block,
-                    overlap=fixed_overlap,
-                    max_order=max_order,
-                    order_width=order_width,
-                    rpm_step=fixed_rpm_step,
-                    calibration_factor=(
-                        fixed_calibration_factor
-                    ),
-                )
-
-        # ---------------------------------------------------------------------
-        # Validate returned result structures
-        # ---------------------------------------------------------------------
-
-        if not curves_by_order:
-            raise ValueError(
-                "Analysis returned no order curves."
+        if analysis_type == ANALYSIS_TRANSFER_CASE:
+            progress.progress(45, text="Running Transfer Case order analysis...")
+            (
+                curves_by_order,
+                results_by_order,
+                raw_curves_by_order,
+            ) = analyze_transfer_case_orders(
+                time=time,
+                rpm=rpm,
+                channels=channels,
+                order_definitions=order_definitions,
+                samples_per_rev=fixed_samples_per_rev,
+                revs_per_block=fixed_revs_per_block,
+                overlap=fixed_overlap,
+                max_order=max_order,
+                order_width=order_width,
+                rpm_step=fixed_rpm_step,
+                calibration_factor=fixed_calibration_factor,
+            )
+        else:
+            progress.progress(45, text="Running Axle Whine order analysis...")
+            (
+                curves_by_order,
+                results_by_order,
+                raw_curves_by_order,
+            ) = analyze_axle_orders(
+                time=time,
+                rpm=rpm,
+                channels=channels,
+                order_definitions=order_definitions,
+                samples_per_rev=fixed_samples_per_rev,
+                revs_per_block=fixed_revs_per_block,
+                overlap=fixed_overlap,
+                max_order=max_order,
+                order_width=order_width,
+                rpm_step=fixed_rpm_step,
+                calibration_factor=fixed_calibration_factor,
             )
 
-        if not results_by_order:
-            raise ValueError(
-                "Analysis returned no result tables."
-            )
+        progress.progress(75, text="Evaluating target compliance...")
 
-        if not raw_curves_by_order:
-            raise ValueError(
-                "Analysis returned no raw curve data."
-            )
-
-        # ---------------------------------------------------------------------
-        # Overall status
-        # ---------------------------------------------------------------------
-
-        evaluated_statuses = []
-
-        for result_dataframe in (
-            results_by_order.values()
-        ):
-            if (
-                "Status"
-                not in result_dataframe.columns
-            ):
-                raise ValueError(
-                    "A result table does not contain "
-                    "the Status column."
-                )
-
-            evaluated_rows = result_dataframe[
-                result_dataframe[
-                    "Status"
-                ] != "INFO"
+        statuses = []
+        for result_dataframe in results_by_order.values():
+            evaluated = result_dataframe[
+                result_dataframe["Status"] != "INFO"
             ]
+            statuses.extend(evaluated["Status"].tolist())
 
-            if len(
-                evaluated_rows
-            ) > 0:
-                evaluated_statuses.extend(
-                    evaluated_rows[
-                        "Status"
-                    ].tolist()
-                )
-
-        if len(
-            evaluated_statuses
-        ) == 0:
+        if not statuses:
             overall_status = "INFO"
-
-        elif any(
-            status == "FAIL"
-            for status in evaluated_statuses
-        ):
+        elif any(status == "FAIL" for status in statuses):
             overall_status = "FAIL"
-
         else:
             overall_status = "PASS"
-
-               # ---------------------------------------------------------------------
-        # Overall assessment display
-        # ---------------------------------------------------------------------
-
-        st.markdown(
-            """
-            <div class="section-title">
-                📊 Overall Assessment
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        if overall_status == "PASS":
-            st.success(
-                "Overall Assessment: PASS"
-            )
-
-        elif overall_status == "FAIL":
-            st.error(
-                "Overall Assessment: FAIL"
-            )
-
-        else:
-            st.info(
-                "Overall Assessment: INFO"
-            )
-        # ---------------------------------------------------------------------
-        # Vehicle and analysis metadata
-        # ---------------------------------------------------------------------
 
         vehicle_information = {
             "VIN": vin_number,
             "Analysis Type": analysis_type,
             "Fuel Type": fuel_type,
-            "Vehicle Configuration": (
-                vehicle_configuration
-            ),
+            "Vehicle Configuration": vehicle_configuration,
             "Target Orders": ", ".join(
-                str(
-                    order_value
-                )
-                for order_value in (
-                    order_definitions.keys()
-                )
+                str(order_value)
+                for order_value in order_definitions
             ),
             "Order Width": order_width,
             "RPM Step": fixed_rpm_step,
-            "Samples per Rev": (
-                fixed_samples_per_rev
-            ),
-            "Revs per Block": (
-                fixed_revs_per_block
-            ),
+            "Samples per Rev": fixed_samples_per_rev,
+            "Revs per Block": fixed_revs_per_block,
             "Overlap": fixed_overlap,
-            "Calibration Factor": (
-                fixed_calibration_factor
-            ),
+            "Calibration Factor": fixed_calibration_factor,
             "Max Order": max_order,
-            "Overall Assessment": (
-                overall_status
-            ),
+            "Overall Assessment": overall_status,
         }
 
-              # ---------------------------------------------------------------------
-        # Excel report
-        # ---------------------------------------------------------------------
+        progress.progress(88, text="Generating Excel report...")
 
         excel_report = make_excel_report(
-            vehicle_information=(
-                vehicle_information
-                
-            ),
-            results_by_order=(
-                results_by_order
-            ),
-            curves_by_order=(
-                raw_curves_by_order
-            ),
-            order_definitions=(
-                order_definitions
-            ),
+            vehicle_information,
+            results_by_order,
+            raw_curves_by_order,
+            order_definitions,
         )
 
-        # ---------------------------------------------------------------------
-        # Store results in Streamlit session state
-        # ---------------------------------------------------------------------
+        st.session_state.update(
+            {
+                "analysis_completed": True,
+                "analysis_type_result": analysis_type,
+                "time_result": time,
+                "rpm_result": rpm,
+                "channels_result": channels,
+                "curves_by_order": curves_by_order,
+                "results_by_order": results_by_order,
+                "raw_curves_by_order": raw_curves_by_order,
+                "order_definitions_result": order_definitions,
+                "overall_status": overall_status,
+                "vehicle_configuration_result": vehicle_configuration,
+                "selected_channel_result": selected_channel,
+                "analysis_settings_result": {
+                    "samples_per_rev": fixed_samples_per_rev,
+                    "revs_per_block": fixed_revs_per_block,
+                    "overlap": fixed_overlap,
+                    "max_order": max_order,
+                    "calibration_factor": fixed_calibration_factor,
+                },
+                "excel_report": excel_report,
+                "vehicle_information": vehicle_information,
+                "vin_result": vin_number,
+            }
+        )
 
-        st.session_state[
-            "excel_report"
-        ] = excel_report
-
-        st.session_state[
-            "vehicle_information"
-        ] = vehicle_information
-
-        st.session_state[
-            "vin_result"
-        ] = vin_number
-
-        st.session_state[
-            "analysis_completed"
-        ] = True
-
-        st.session_state[
-            "analysis_type_result"
-        ] = analysis_type
-
-        st.session_state[
-            "time_result"
-        ] = time
-
-        st.session_state[
-            "rpm_result"
-        ] = rpm
-
-        st.session_state[
-            "channels_result"
-        ] = channels
-
-        st.session_state[
-            "curves_by_order"
-        ] = curves_by_order
-
-        st.session_state[
-            "results_by_order"
-        ] = results_by_order
-
-        st.session_state[
-            "raw_curves_by_order"
-        ] = raw_curves_by_order
-
-        st.session_state[
-            "order_definitions_result"
-        ] = order_definitions
-
-        st.session_state[
-            "overall_status"
-        ] = overall_status
-
-        st.session_state[
-            "vehicle_configuration_result"
-        ] = vehicle_configuration
-
-        st.session_state[
-            "selected_channel_result"
-        ] = selected_channel
-
-        st.session_state[
-            "analysis_settings_result"
-        ] = {
-            "samples_per_rev": (
-                fixed_samples_per_rev
-            ),
-            "revs_per_block": (
-                fixed_revs_per_block
-            ),
-            "overlap": fixed_overlap,
-            "max_order": max_order,
-            "calibration_factor": (
-                fixed_calibration_factor
-            ),
-        }
+        progress.progress(100, text="Analysis completed.")
+        st.success("Analysis completed successfully.")
 
     except Exception as error:
-        st.session_state[
-            "analysis_completed"
-        ] = False
+        st.session_state["analysis_completed"] = False
+        st.error("An error occurred while running the analysis.")
+        st.exception(error)
 
-        st.error(
-            "An error occurred while running the analysis."
-        )
 
-        st.exception(
-            error
-        )
-        # =============================================================================
-# PERSISTENT RESULT DISPLAY
+# =============================================================================
+# RESULTS
 # =============================================================================
 
-if st.session_state.get(
-    "analysis_completed",
-    False,
-):
-    result_analysis_type = st.session_state[
-        "analysis_type_result"
+def determine_order_status(result_dataframe: pd.DataFrame) -> str:
+    evaluated = result_dataframe[
+        result_dataframe["Status"] != "INFO"
     ]
-
-    result_time = st.session_state[
-        "time_result"
-    ]
-
-    result_rpm = st.session_state[
-        "rpm_result"
-    ]
-
-    result_channels = st.session_state[
-        "channels_result"
-    ]
-
-    result_curves_by_order = st.session_state[
-        "curves_by_order"
-    ]
-
-    result_tables_by_order = st.session_state[
-        "results_by_order"
-    ]
-
-    result_raw_curves_by_order = st.session_state[
-        "raw_curves_by_order"
-    ]
-
-    result_order_definitions = st.session_state[
-        "order_definitions_result"
-    ]
-
-    result_overall_status = st.session_state[
-        "overall_status"
-    ]
-
-    result_vehicle_configuration = st.session_state[
-        "vehicle_configuration_result"
-    ]
-
-    result_selected_channel = st.session_state[
-        "selected_channel_result"
-    ]
-
-    result_analysis_settings = st.session_state[
-        "analysis_settings_result"
-    ]
-
-    result_vin = st.session_state.get(
-        "vin_result",
-        vin_number,
-    )
-
-    stored_excel_report = st.session_state.get(
-        "excel_report"
-    )
+    if len(evaluated) == 0:
+        return "INFO"
+    if (evaluated["Status"] == "PASS").all():
+        return "PASS"
+    return "FAIL"
 
 
-    # =========================================================================
-    # OVERALL ASSESSMENT
-    # =========================================================================
+def display_order_result(
+    order_value: float,
+    definition: Mapping[str, object],
+    result_dataframe: pd.DataFrame,
+    channel_curves: Mapping[str, dict],
+    result_vin: str,
+    result_analysis_type: str,
+    result_vehicle_configuration: str,
+) -> None:
+    status = determine_order_status(result_dataframe)
 
-    st.divider()
+    section_title(f"{definition['label']} Result Summary")
 
-    st.subheader(
-        "Overall Assessment"
-    )
+    metric_columns = st.columns(4)
 
-    if result_overall_status == "PASS":
-        st.success(
-            "Overall Assessment: PASS"
+    for metric_column, channel_name in zip(
+        metric_columns[:3],
+        CHANNEL_NAMES,
+    ):
+        matching = result_dataframe.loc[
+            result_dataframe["Channel"] == channel_name,
+            "Peak Amplitude [m/s²]",
+        ]
+        value = (
+            f"{float(matching.iloc[0]):.2f} m/s²"
+            if len(matching)
+            else "N/A"
+        )
+        metric_column.metric(
+            f"Peak {channel_name}",
+            value,
         )
 
-    elif result_overall_status == "FAIL":
-        st.error(
-            "Overall Assessment: FAIL"
-        )
+    metric_columns[3].metric("Assessment", status)
 
+    figure = plot_order_comparison(
+        order_label=definition["label"],
+        channel_curves=channel_curves,
+        target_rpm=definition.get("target_rpm"),
+        target_amp=definition.get("target_amp"),
+        vin=result_vin,
+        analysis_type=result_analysis_type,
+        vehicle_configuration=result_vehicle_configuration,
+    )
+    st.pyplot(figure, width="stretch")
+    plt.close(figure)
+
+    st.dataframe(
+        result_dataframe,
+        width="stretch",
+        hide_index=True,
+    )
+
+    if status == "PASS":
+        st.success(f"{definition['label']} Assessment: PASS")
+    elif status == "FAIL":
+        st.error(f"{definition['label']} Assessment: FAIL")
     else:
         st.info(
-            "Overall Assessment: INFO"
+            f"{definition['label']} Assessment: INFO — "
+            "no target is defined for this harmonic."
         )
 
 
-    # =========================================================================
-    # EXCEL REPORT DOWNLOAD
-    # =========================================================================
+if st.session_state.get("analysis_completed", False):
+    st.divider()
 
-    if stored_excel_report is not None:
+    result_analysis_type = st.session_state["analysis_type_result"]
+    result_time = st.session_state["time_result"]
+    result_rpm = st.session_state["rpm_result"]
+    result_channels = st.session_state["channels_result"]
+    result_curves = st.session_state["curves_by_order"]
+    result_tables = st.session_state["results_by_order"]
+    result_raw_curves = st.session_state["raw_curves_by_order"]
+    result_definitions = st.session_state["order_definitions_result"]
+    result_status = st.session_state["overall_status"]
+    result_configuration = st.session_state[
+        "vehicle_configuration_result"
+    ]
+    result_channel = st.session_state["selected_channel_result"]
+    result_settings = st.session_state["analysis_settings_result"]
+    result_vin = st.session_state["vin_result"]
+
+    with st.container(border=True):
+        section_title(
+            "Overall Assessment",
+            "Executive summary of the completed order analysis.",
+        )
+
+        summary_columns = st.columns(4)
+        summary_columns[0].metric("Overall Status", result_status)
+        summary_columns[1].metric("VIN", result_vin)
+        summary_columns[2].metric(
+            "Analysis",
+            (
+                "Axle Whine"
+                if result_analysis_type == ANALYSIS_AXLE
+                else "Transfer Case"
+            ),
+        )
+        summary_columns[3].metric(
+            "Configuration",
+            result_configuration,
+        )
+
+        if result_status == "PASS":
+            st.success("Overall Assessment: PASS")
+        elif result_status == "FAIL":
+            st.error("Overall Assessment: FAIL")
+        else:
+            st.info("Overall Assessment: INFO")
+
         st.download_button(
             label="Download Excel Report",
-            data=stored_excel_report,
+            data=st.session_state["excel_report"],
             file_name=(
                 f"{result_vin}_"
                 f"{result_analysis_type.replace(' ', '_')}"
-                f"_report.xlsx"
+                "_report.xlsx"
             ),
             mime=(
-                "application/vnd.openxmlformats-"
-                "officedocument.spreadsheetml.sheet"
+                "application/vnd.openxmlformats-officedocument."
+                "spreadsheetml.sheet"
             ),
-            use_container_width=True,
-            key="persistent_excel_download",
+            width="stretch",
+            key="download_excel_report",
         )
 
-
-    # =========================================================================
-    # SMALL DISPLAY HELPERS
-    # =========================================================================
-
-    def get_channel_peak(
-        result_dataframe: pd.DataFrame,
-        channel_name: str
-    ) -> float:
-        """
-        Return the peak amplitude for one channel.
-        """
-        matching_rows = result_dataframe.loc[
-            result_dataframe[
-                "Channel"
-            ] == channel_name,
-            "Peak Amplitude [m/s²]",
-        ]
-
-        if len(matching_rows) == 0:
-            return float("nan")
-
-        return float(
-            matching_rows.iloc[0]
-        )
-
-
-    def determine_order_status(
-        result_dataframe: pd.DataFrame
-    ) -> str:
-        """
-        Determine order-level PASS, FAIL or INFO status.
-        """
-        if (
-            "Status"
-            not in result_dataframe.columns
-        ):
-            return "INFO"
-
-        evaluated_rows = result_dataframe[
-            result_dataframe[
-                "Status"
-            ] != "INFO"
-        ]
-
-        if len(evaluated_rows) == 0:
-            return "INFO"
-
-        if (
-            evaluated_rows[
-                "Status"
-            ] == "PASS"
-        ).all():
-            return "PASS"
-
-        return "FAIL"
-
-
-    def display_order_result(
-        order_value: float,
-        definition: Mapping[str, object],
-        result_dataframe: pd.DataFrame,
-        channel_curves: Mapping[str, dict],
-        show_separator: bool = True
-    ) -> None:
-        """
-        Display KPI cards, comparison plot and result table for one order.
-        """
-        order_status = determine_order_status(
-            result_dataframe
-        )
-
-        st.subheader(
-            f"{definition['label']} Result Summary"
-        )
-
-        metric_columns = st.columns(
-            4
-        )
-
-        for metric_column, channel_name in zip(
-            metric_columns[:3],
-            CHANNEL_NAMES,
-        ):
-            peak_value = get_channel_peak(
-                result_dataframe,
-                channel_name,
-            )
-
-            if np.isfinite(
-                peak_value
-            ):
-                displayed_peak = (
-                    f"{peak_value:.2f} m/s²"
-                )
-            else:
-                displayed_peak = "N/A"
-
-            metric_column.metric(
-                f"Peak {channel_name}",
-                displayed_peak,
-            )
-
-        metric_columns[3].metric(
-            "Assessment",
-            order_status,
-        )
-
-        comparison_figure = plot_order_comparison(
-            order_label=definition[
-                "label"
-            ],
-            channel_curves=channel_curves,
-            target_rpm=definition.get(
-                "target_rpm"
-            ),
-            target_amp=definition.get(
-                "target_amp"
-            ),
-            vin_number=result_vin,
-            analysis_type=(
-                result_analysis_type
-            ),
-            vehicle_configuration=(
-                result_vehicle_configuration
-            ),
-        )
-
-        st.pyplot(
-            comparison_figure,
-            use_container_width=True,
-        )
-
-        plt.close(
-            comparison_figure
-        )
-
-        if (
-            definition.get(
-                "target_rpm"
-            )
-            is not None
-            and definition.get(
-                "target_amp"
-            )
-            is not None
-        ):
-            table_title = (
-                f"{definition['label']} "
-                "Target Compliance"
-            )
-
-        else:
-            table_title = (
-                f"{definition['label']} "
-                "Informational Results"
-            )
-
-        st.subheader(
-            table_title
-        )
-
-        st.dataframe(
-            result_dataframe,
-            use_container_width=True,
-            hide_index=True,
-        )
-
-        if order_status == "PASS":
-            st.success(
-                f"{definition['label']} Assessment: PASS"
-            )
-
-        elif order_status == "FAIL":
-            st.error(
-                f"{definition['label']} Assessment: FAIL"
-            )
-
-        else:
-            st.info(
-                f"{definition['label']} Assessment: INFO — "
-                "No target has been defined for this harmonic."
-            )
-
-        if show_separator:
-            st.markdown(
-                "---"
-            )
-
-
-    # =========================================================================
-    # TRANSFER CASE RESULT TABS
-    # =========================================================================
-
-    if (
-        result_analysis_type
-        == ANALYSIS_TRANSFER_CASE
-    ):
-        (
-            gear_mesh_results_tab,
-            order_map_tab,
-            raw_results_tab,
-        ) = st.tabs(
+    if result_analysis_type == ANALYSIS_TRANSFER_CASE:
+        order_results_tab, order_map_tab, raw_tab = st.tabs(
             [
                 "Gear Mesh Order Results",
                 "Order Map / Waterfall",
@@ -3477,207 +1651,95 @@ if st.session_state.get(
             ]
         )
 
-        with gear_mesh_results_tab:
-            # Show base orders first, followed by second harmonics.
-            transfer_case_display_order = [
-                63.0,
-                85.05,
-                126.0,
-                170.10,
-            ]
-
-            for display_index, order_value in enumerate(
-                transfer_case_display_order
-            ):
+        with order_results_tab:
+            for order_value in [63.0, 85.05, 126.0, 170.10]:
                 if (
-                    order_value
-                    not in result_order_definitions
+                    order_value in result_definitions
+                    and order_value in result_tables
                 ):
-                    continue
-
-                if (
-                    order_value
-                    not in result_tables_by_order
-                ):
-                    continue
-
-                display_order_result(
-                    order_value=order_value,
-                    definition=(
-                        result_order_definitions[
-                            order_value
-                        ]
-                    ),
-                    result_dataframe=(
-                        result_tables_by_order[
-                            order_value
-                        ]
-                    ),
-                    channel_curves=(
-                        result_curves_by_order[
-                            order_value
-                        ]
-                    ),
-                    show_separator=(
-                        display_index
-                        < len(
-                            transfer_case_display_order
-                        ) - 1
-                    ),
-                )
-
-
-    # =========================================================================
-    # AXLE WHINE RESULT TABS
-    # =========================================================================
-
+                    with st.container(border=True):
+                        display_order_result(
+                            order_value,
+                            result_definitions[order_value],
+                            result_tables[order_value],
+                            result_curves[order_value],
+                            result_vin,
+                            result_analysis_type,
+                            result_configuration,
+                        )
     else:
-        (
-            order_10_tab,
-            order_20_tab,
-            order_map_tab,
-            raw_results_tab,
-        ) = st.tabs(
+        order_10_tab, order_20_tab, order_map_tab, raw_tab = st.tabs(
             [
-                "10th Order Target Comparison",
-                "20th Order Target Comparison",
+                "10th Order",
+                "20th Order",
                 "Order Map / Waterfall",
                 "Raw Results",
             ]
         )
 
-        axle_order_tabs = {
-            10.0: order_10_tab,
-            20.0: order_20_tab,
-        }
+        for order_value, tab in [
+            (10.0, order_10_tab),
+            (20.0, order_20_tab),
+        ]:
+            with tab:
+                with st.container(border=True):
+                    display_order_result(
+                        order_value,
+                        result_definitions[order_value],
+                        result_tables[order_value],
+                        result_curves[order_value],
+                        result_vin,
+                        result_analysis_type,
+                        result_configuration,
+                    )
 
-        for order_value, result_tab in (
-            axle_order_tabs.items()
-        ):
-            if (
-                order_value
-                not in result_order_definitions
-            ):
-                continue
+    with order_map_tab:
+        with st.container(border=True):
+            section_title(
+                f"Order Map / Waterfall — {result_channel}"
+            )
+            map_figure = create_order_map_figure(
+                time=result_time,
+                rpm=result_rpm,
+                signal=result_channels[result_channel],
+                selected_channel=result_channel,
+                analysis_type=result_analysis_type,
+                vin=result_vin,
+                samples_per_rev=result_settings["samples_per_rev"],
+                revs_per_block=result_settings["revs_per_block"],
+                overlap=result_settings["overlap"],
+                max_order=result_settings["max_order"],
+                calibration_factor=result_settings[
+                    "calibration_factor"
+                ],
+            )
+            st.pyplot(map_figure, width="stretch")
+            plt.close(map_figure)
 
-            with result_tab:
-                display_order_result(
-                    order_value=order_value,
-                    definition=(
-                        result_order_definitions[
-                            order_value
-                        ]
-                    ),
-                    result_dataframe=(
-                        result_tables_by_order[
-                            order_value
-                        ]
-                    ),
-                    channel_curves=(
-                        result_curves_by_order[
-                            order_value
-                        ]
-                    ),
-                    show_separator=False,
+    with raw_tab:
+        for order_value, curve_dataframe in result_raw_curves.items():
+            with st.container(border=True):
+                section_title(
+                    f"{result_definitions[order_value]['label']} Raw Curve Data"
+                )
+                st.dataframe(
+                    curve_dataframe,
+                    width="stretch",
+                    hide_index=True,
                 )
 
 
-    # =========================================================================
-    # ORDER MAP / WATERFALL TAB
-    # =========================================================================
+# =============================================================================
+# SYSTEM STATUS
+# =============================================================================
 
-    with order_map_tab:
-        st.subheader(
-            f"Order Map / Waterfall - "
-            f"{result_selected_channel}"
-        )
-
-        map_figure = create_order_map_figure(
-            time=result_time,
-            rpm=result_rpm,
-            signal=result_channels[
-                result_selected_channel
-            ],
-            selected_channel=(
-                result_selected_channel
-            ),
-            analysis_type=(
-                result_analysis_type
-            ),
-            vin_number=result_vin,
-            samples_per_rev=(
-                result_analysis_settings[
-                    "samples_per_rev"
-                ]
-            ),
-            revs_per_block=(
-                result_analysis_settings[
-                    "revs_per_block"
-                ]
-            ),
-            overlap=(
-                result_analysis_settings[
-                    "overlap"
-                ]
-            ),
-            max_order=(
-                result_analysis_settings[
-                    "max_order"
-                ]
-            ),
-            calibration_factor=(
-                result_analysis_settings[
-                    "calibration_factor"
-                ]
-            ),
-        )
-
-        st.pyplot(
-            map_figure,
-            use_container_width=True,
-        )
-
-        plt.close(
-            map_figure
-        )
-
-        if (
-            result_analysis_type
-            == ANALYSIS_TRANSFER_CASE
-        ):
-            st.caption(
-                "Transfer Case order map calculated using "
-                "20 revolutions per FFT block, providing "
-                "0.05 order resolution."
-            )
-
-
-    # =========================================================================
-    # RAW RESULTS TAB
-    # =========================================================================
-
-    with raw_results_tab:
-        for order_value, curve_dataframe in (
-            result_raw_curves_by_order.items()
-        ):
-            definition = (
-                result_order_definitions[
-                    order_value
-                ]
-            )
-
-            st.subheader(
-                f"{definition['label']} "
-                "Raw Curve Data"
-            )
-
-            st.dataframe(
-                curve_dataframe,
-                use_container_width=True,
-                hide_index=True,
-            )
-
-            st.markdown(
-                "---"
-            )
-            # =============================================================================
+with st.expander("System and Module Status", expanded=False):
+    st.success("Axle Whine analysis engine: Ready")
+    st.success("Transfer Case analysis engine: Ready")
+    st.write(
+        {
+            "Supported file types": ["XLSX", "CSV"],
+            "Supported channels": CHANNEL_NAMES,
+            "CSV unit conversion": "g → m/s²",
+        }
+    )
