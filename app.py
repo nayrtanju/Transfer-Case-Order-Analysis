@@ -56,7 +56,27 @@ st.markdown(
             Arial,
             sans-serif;
     }
+/* ---------------------------------------------------------
+   STREAMLIT CONTAINERS / ENGINEERING CARDS
+--------------------------------------------------------- */
 
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    background-color: #ffffff;
+
+    border:
+        1px solid
+        #dfe5ea !important;
+
+    border-radius: 14px !important;
+
+    padding: 8px 14px 16px 14px;
+
+    margin-bottom: 18px;
+
+    box-shadow:
+        0 4px 16px
+        rgba(17, 45, 72, 0.06);
+}
 
     /* ---------------------------------------------------------
        HEADER
@@ -2150,19 +2170,114 @@ def make_excel_report(
     )
 
     return output
-    # =============================================================================
-# USER INTERFACE
+
+# =============================================================================
+# VEHICLE INFORMATION CARD
 # =============================================================================
 
-st.subheader(
-    "Vehicle Information"
-)
+with st.container(
+    border=True
+):
+    st.markdown(
+        """
+        <div class="section-title">
+            Vehicle Information
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-vehicle_column, analysis_column, option_column_1, option_column_2 = (
-    st.columns(4)
-)
+    (
+        vehicle_column,
+        analysis_column,
+        option_column_1,
+        option_column_2,
+    ) = st.columns(
+        4
+    )
 
+    with vehicle_column:
+        vin_number = st.text_input(
+            "VIN Number",
+            placeholder="Enter 17-character VIN",
+            max_chars=17,
+        ).upper().strip()
 
+    vin_valid = bool(
+        re.fullmatch(
+            r"[A-Z0-9]{17}",
+            vin_number,
+        )
+    )
+
+    with analysis_column:
+        analysis_type = st.selectbox(
+            "Analysis Type",
+            [
+                ANALYSIS_AXLE,
+                ANALYSIS_TRANSFER_CASE,
+            ],
+            disabled=not vin_valid,
+        )
+
+    if analysis_type == ANALYSIS_AXLE:
+
+        with option_column_1:
+            fuel_type = st.selectbox(
+                "Fuel Type",
+                [
+                    "Select fuel type",
+                    "Diesel",
+                    "Gasoline",
+                ],
+                disabled=not vin_valid,
+            )
+
+        with option_column_2:
+            axle_type = st.selectbox(
+                "Axle Type",
+                [
+                    "Select axle type",
+                    "Front Axle",
+                    "Rear Axle",
+                ],
+                disabled=not vin_valid,
+            )
+
+        vehicle_configuration = (
+            f"{fuel_type} | {axle_type}"
+        )
+
+    else:
+        fuel_type = "N/A"
+
+        axle_type = (
+            "Transfer Case / 6th Gear"
+        )
+
+        vehicle_configuration = (
+            "Transfer Case | 6th Gear"
+        )
+
+        with option_column_1:
+            st.text_input(
+                "Gear",
+                value="6th Gear",
+                disabled=True,
+            )
+
+        with option_column_2:
+            st.text_input(
+                "Component",
+                value="Transfer Case",
+                disabled=True,
+            )
+
+    if vin_number and not vin_valid:
+        st.error(
+            "VIN must be exactly 17 characters "
+            "and contain only letters and numbers."
+        )
 # -----------------------------------------------------------------------------
 # VIN
 # -----------------------------------------------------------------------------
@@ -2262,32 +2377,39 @@ if vin_number and not vin_valid:
         "and contain only letters and numbers."
     )
 
-
 # =============================================================================
-# MEASUREMENT FILE
+# MEASUREMENT DATA CARD
 # =============================================================================
 
-st.markdown(
-    """
-    <div class="section-title">
-        📂 Measurement Data
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+with st.container(
+    border=True
+):
+    st.markdown(
+        """
+        <div class="section-title">
+            Measurement Data
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-uploaded_file = st.file_uploader(
-    "Upload Measurement File",
-    type=[
-        "xlsx",
-        "csv",
-    ],
-    disabled=not vin_valid,
-    help=(
-        "Supported formats: XLSX and CSV. "
-        "Expected columns: Time, ChA, ChB, ChC, RPM."
-    ),
-)
+    st.caption(
+        "Upload a measurement file containing "
+        "Time, ChA, ChB, ChC and RPM columns."
+    )
+
+    uploaded_file = st.file_uploader(
+        "Upload Measurement File",
+        type=[
+            "xlsx",
+            "csv",
+        ],
+        disabled=not vin_valid,
+        help=(
+            "Supported formats: XLSX and CSV. "
+            "Expected columns: Time, ChA, ChB, ChC, RPM."
+        ),
+    )
 
 
 # =============================================================================
@@ -2422,78 +2544,75 @@ information_columns[3].metric(
 
 
 # =============================================================================
-# ANALYSIS SETTINGS
+# ANALYSIS SETTINGS CARD
 # =============================================================================
 
-st.markdown(
-    """
-    <div class="section-title">
-        ⚙️ Analysis Settings
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-with st.expander(
-    "Advanced Settings",
-    expanded=False,
+with st.container(
+    border=True
 ):
-
-    selected_channel = st.selectbox(
-        "Order Map Channel",
-        CHANNEL_NAMES,
+    st.markdown(
+        """
+        <div class="section-title">
+            Analysis Settings
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-    max_order = st.slider(
+    settings_summary_columns = st.columns(
+        5
+    )
+
+    settings_summary_columns[0].metric(
+        "Samples / Rev",
+        fixed_samples_per_rev,
+    )
+
+    settings_summary_columns[1].metric(
+        "Revs / Block",
+        fixed_revs_per_block,
+    )
+
+    settings_summary_columns[2].metric(
+        "Overlap",
+        f"{fixed_overlap * 100:.0f}%",
+    )
+
+    settings_summary_columns[3].metric(
+        "RPM Step",
+        f"{fixed_rpm_step:.0f}",
+    )
+
+    settings_summary_columns[4].metric(
         "Max Order",
-        min_value=minimum_max_order,
-        max_value=250,
-        value=default_max_order,
-        step=1,
+        default_max_order,
     )
 
-    order_width = st.number_input(
-        "Order Width",
-        min_value=0.05,
-        max_value=2.0,
-        value=0.15,
-        step=0.05,
-        format="%.2f",
-    )
+    with st.expander(
+        "Advanced Settings",
+        expanded=False,
+    ):
+        selected_channel = st.selectbox(
+            "Order Map Channel",
+            CHANNEL_NAMES,
+        )
 
+        max_order = st.slider(
+            "Max Order",
+            min_value=minimum_max_order,
+            max_value=250,
+            value=default_max_order,
+            step=1,
+        )
 
-# =============================================================================
-# SETTINGS SUMMARY
-# =============================================================================
-
-settings_columns = st.columns(
-    5
-)
-
-settings_columns[0].metric(
-    "Samples / Rev",
-    fixed_samples_per_rev,
-)
-
-settings_columns[1].metric(
-    "Revs / Block",
-    fixed_revs_per_block,
-)
-
-settings_columns[2].metric(
-    "Overlap",
-    f"{fixed_overlap * 100:.0f}%",
-)
-
-settings_columns[3].metric(
-    "RPM Step",
-    f"{fixed_rpm_step:.0f}",
-)
-
-settings_columns[4].metric(
-    "Max Order",
-    max_order,
-)
-
+        order_width = st.number_input(
+            "Order Width",
+            min_value=0.05,
+            max_value=2.0,
+            value=0.15,
+            step=0.05,
+            format="%.2f",
+        )
 # =============================================================================
 # MODULE STATUS DISPLAY
 # =============================================================================
