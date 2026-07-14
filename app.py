@@ -15,6 +15,24 @@ try:
     import plotly.graph_objects as go
 except ImportError:
     go = None
+
+try:
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_CENTER
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import mm
+    from reportlab.platypus import (
+        PageBreak,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
 from openpyxl.drawing.image import Image as XLImage
 from openpyxl.styles import Font, PatternFill
 
@@ -32,154 +50,98 @@ st.set_page_config(
 
 
 # =============================================================================
-# UI THEME
+# UX SETTINGS, LANGUAGE AND THEME
 # =============================================================================
-theme_mode = st.sidebar.selectbox(
-    "Appearance",
-    ["Corporate Light", "Engineering Dark"],
-    index=0,
-    key="theme_mode",
-)
+
+LANGUAGES = {
+    "English": {
+        "run": "Run Analysis",
+        "pdf": "Download PDF Report",
+        "startup": "Engineering analysis environment initialized",
+    },
+    "Türkçe": {
+        "run": "Analizi Başlat",
+        "pdf": "PDF Raporunu İndir",
+        "startup": "Mühendislik analiz ortamı hazırlandı",
+    },
+}
+
+with st.sidebar:
+    language_name = st.selectbox(
+        "Language / Dil",
+        list(LANGUAGES.keys()),
+        index=0,
+        key="language_name",
+    )
+
+    theme_mode = st.selectbox(
+        "Appearance",
+        ["Corporate Light", "Engineering Dark"],
+        index=0,
+        key="theme_mode",
+    )
+
+    compact_mode = st.toggle(
+        "Compact Result Cards",
+        value=False,
+        key="compact_mode",
+    )
+
+    show_static_plots = st.toggle(
+        "Show Static Engineering Plots",
+        value=False,
+        key="show_static_plots",
+    )
+
+    show_startup_panel = st.toggle(
+        "Show Startup Status",
+        value=True,
+        key="show_startup_panel",
+    )
+
+T = LANGUAGES[language_name]
 
 if theme_mode == "Engineering Dark":
-    st.markdown("""
+    st.markdown(
+        """
 <style>
-.stApp{background:#111827;color:#F3F4F6;}
+.stApp {background:#111827;color:#F3F4F6;}
 div[data-testid="stVerticalBlockBorderWrapper"]{
-background:#1F2937!important;
-border:1px solid #374151!important;
+background:#1F2937!important;border:1px solid #374151!important;
 }
-.section-title{
-color:#F3F4F6!important;
-border-left-color:#3B82F6!important;
-}
+.section-title{color:#F3F4F6!important;border-left-color:#3B82F6!important;}
+.section-subtitle{color:#B8C5D1!important;}
 div[data-testid="metric-container"]{
-background:#1F2937!important;
-border:1px solid #374151!important;
+background:#1F2937!important;border:1px solid #374151!important;
 }
-
-
-/* ---------------------------------------------------------
-   PROFESSIONAL SIDEBAR NAVIGATION
---------------------------------------------------------- */
-
-section[data-testid="stSidebar"] {
-    background:
-        linear-gradient(
-            180deg,
-            #0B1F33 0%,
-            #102D49 52%,
-            #123A63 100%
-        );
-    border-right: 1px solid rgba(255,255,255,0.08);
+div[data-testid="metric-container"] label,
+div[data-testid="metric-container"] [data-testid="stMetricValue"]{
+color:#F3F4F6!important;
 }
+.info-panel{background:#172033!important;border-color:#374151!important;}
+.info-panel-title,.info-panel-body{color:#E5E7EB!important;}
 
-section[data-testid="stSidebar"] > div {
-    padding-top: 1.1rem;
-}
-
-section[data-testid="stSidebar"] * {
-    color: #F4F8FB;
-}
-
-section[data-testid="stSidebar"] label {
-    color: #D8E6F2 !important;
-    font-weight: 650 !important;
-}
-
-section[data-testid="stSidebar"] div[data-baseweb="select"] > div {
-    background: rgba(255,255,255,0.10) !important;
-    border-color: rgba(255,255,255,0.20) !important;
-    color: #FFFFFF !important;
-}
-
-.sidebar-brand {
-    padding: 18px 16px;
-    margin-bottom: 14px;
-    border-radius: 14px;
-    background: rgba(255,255,255,0.09);
-    border: 1px solid rgba(255,255,255,0.12);
-    box-shadow: 0 8px 22px rgba(0,0,0,0.14);
-}
-
-.sidebar-brand-title {
-    font-size: 1.05rem;
-    font-weight: 800;
-    color: #FFFFFF;
-    letter-spacing: 0.01em;
-}
-
-.sidebar-brand-subtitle {
-    margin-top: 5px;
-    font-size: 0.80rem;
-    color: rgba(255,255,255,0.72);
-    line-height: 1.45;
-}
-
-.sidebar-section-label {
-    margin-top: 18px;
-    margin-bottom: 8px;
-    color: rgba(255,255,255,0.62);
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.11em;
-    text-transform: uppercase;
-}
-
-.sidebar-nav-link {
-    display: block;
-    padding: 10px 12px;
-    margin: 5px 0;
-    border-radius: 9px;
-    color: #EAF3FA !important;
-    text-decoration: none !important;
-    font-size: 0.90rem;
-    font-weight: 650;
-    background: rgba(255,255,255,0.055);
-    border: 1px solid rgba(255,255,255,0.08);
-    transition:
-        background 0.16s ease,
-        transform 0.16s ease,
-        border-color 0.16s ease;
-}
-
-.sidebar-nav-link:hover {
-    background: rgba(255,255,255,0.13);
-    border-color: rgba(255,255,255,0.20);
-    transform: translateX(2px);
-}
-
-.sidebar-status-card {
-    padding: 12px 13px;
-    margin-top: 8px;
-    border-radius: 10px;
-    background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(255,255,255,0.10);
-}
-
-.sidebar-status-title {
-    font-size: 0.78rem;
-    font-weight: 750;
-    color: #FFFFFF;
-}
-
-.sidebar-status-value {
-    margin-top: 3px;
-    font-size: 0.78rem;
-    color: rgba(255,255,255,0.70);
-}
-
-
-.top-toolbar{
-background:#fff;
-border:1px solid #DCE4EA;
-border-radius:12px;
-padding:10px;
-margin-bottom:12px;
-}
+.startup-panel{background:linear-gradient(135deg,#FFF 0%,#F4F8FC 100%);
+border:1px solid #DCE4EA;border-radius:14px;padding:16px 18px;
+margin-bottom:14px;box-shadow:0 5px 14px rgba(17,45,72,.06);}
+.startup-title{color:#17324D;font-size:1rem;font-weight:800;}
+.startup-text{color:#657887;font-size:.86rem;margin-top:4px;}
+.progress-step{border-radius:10px;padding:10px 12px;margin:4px 0;
+border:1px solid #DCE4EA;background:#FFF;}
+.progress-step-complete{border-left:5px solid #2E8B57;}
+.progress-step-active{border-left:5px solid #1768A6;}
+.progress-step-pending{border-left:5px solid #AEBCC7;opacity:.76;}
+.result-summary-card{border:1px solid #DCE4EA;border-radius:13px;padding:15px;
+background:linear-gradient(135deg,#FFF 0%,#F8FAFC 100%);
+box-shadow:0 4px 14px rgba(17,45,72,.05);min-height:132px;}
+.result-card-title{color:#17324D;font-weight:800;font-size:.92rem;}
+.result-card-value{color:#17324D;font-weight:800;font-size:1.35rem;margin-top:8px;}
+.result-card-caption{color:#647787;font-size:.78rem;margin-top:5px;}
 
 </style>
-""", unsafe_allow_html=True)
+""",
+        unsafe_allow_html=True,
+    )
 
 
 
@@ -248,6 +210,21 @@ with top_bar:
         st.button("📄 Report", use_container_width=True, disabled=not st.session_state.get("analysis_completed", False))
     with c4:
         st.button("⬇ Export", use_container_width=True, disabled="excel_report" not in st.session_state)
+
+if show_startup_panel:
+    st.markdown(
+        f"""
+<div class="startup-panel">
+    <div class="startup-title">✓ {T['startup']}</div>
+    <div class="startup-text">
+        Axle Whine Engine: Ready · Transfer Case Engine: Ready ·
+        Interactive Plotting: Ready · Excel Reporting: Ready ·
+        PDF Reporting: {'Ready' if REPORTLAB_AVAILABLE else 'Optional package required'}
+    </div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
 
 with st.sidebar:
     st.markdown(
@@ -630,6 +607,7 @@ def clear_result_state() -> None:
         "selected_channel_result",
         "analysis_settings_result",
         "excel_report",
+        "pdf_report",
         "vehicle_information",
         "vin_result",
     ]
@@ -1631,6 +1609,54 @@ def make_excel_report(
 
 
 # =============================================================================
+# UX WORKFLOW WIZARD
+# =============================================================================
+
+def render_progress_wizard(
+    vin_valid: bool,
+    uploaded_file,
+    configuration_selected: bool,
+    analysis_completed: bool,
+) -> None:
+    steps = [
+        ("Vehicle Information", vin_valid, "Validate the 17-character VIN."),
+        ("Measurement Import", uploaded_file is not None, "Upload measurement data."),
+        ("Signal Configuration", configuration_selected, "Confirm module settings."),
+        ("Order Tracking", analysis_completed, "Run order extraction."),
+        ("Target Evaluation", analysis_completed, "Evaluate target compliance."),
+        (
+            "Report Generation",
+            analysis_completed and "excel_report" in st.session_state,
+            "Generate Excel and PDF reports.",
+        ),
+    ]
+
+    with st.expander("Analysis Workflow", expanded=not analysis_completed):
+        for index, (label, completed, description) in enumerate(steps, start=1):
+            previous_complete = all(item[1] for item in steps[: index - 1])
+            if completed:
+                css_class = "progress-step progress-step-complete"
+                status_text = "✓ Complete"
+            elif previous_complete:
+                css_class = "progress-step progress-step-active"
+                status_text = "● Current"
+            else:
+                css_class = "progress-step progress-step-pending"
+                status_text = "○ Pending"
+
+            st.markdown(
+                f"""
+<div class="{css_class}">
+<strong>{index:02d} · {label}</strong>
+<span style="float:right">{status_text}</span>
+<div style="font-size:.80rem;color:#647787;margin-top:4px">{description}</div>
+</div>
+""",
+                unsafe_allow_html=True,
+            )
+
+
+# =============================================================================
 # UI
 # =============================================================================
 
@@ -1895,6 +1921,13 @@ can_continue = (
 )
 
 
+render_progress_wizard(
+    vin_valid=vin_valid,
+    uploaded_file=uploaded_file,
+    configuration_selected=configuration_selected,
+    analysis_completed=st.session_state.get("analysis_completed", False),
+)
+
 st.markdown('<div id="readiness-section"></div>', unsafe_allow_html=True)
 
 with st.container(border=True):
@@ -1964,7 +1997,7 @@ st.session_state["input_signature"] = current_signature
 # =============================================================================
 
 if st.button(
-    "Run Analysis",
+    T["run"],
     type="primary",
     width="stretch",
     disabled=not can_continue,
@@ -2071,6 +2104,11 @@ if st.button(
             order_definitions,
         )
 
+        pdf_report = make_pdf_report(
+            vehicle_information=vehicle_information,
+            results_by_order=results_by_order,
+        )
+
         st.session_state.update(
             {
                 "analysis_completed": True,
@@ -2093,6 +2131,7 @@ if st.button(
                     "calibration_factor": fixed_calibration_factor,
                 },
                 "excel_report": excel_report,
+                "pdf_report": pdf_report,
                 "vehicle_information": vehicle_information,
                 "vin_result": vin_number,
             }
@@ -2105,6 +2144,110 @@ if st.button(
         st.session_state["analysis_completed"] = False
         st.error("An error occurred while running the analysis.")
         st.exception(error)
+
+
+# =============================================================================
+# PDF REPORT GENERATION
+# =============================================================================
+
+def make_pdf_report(
+    vehicle_information: dict,
+    results_by_order: Mapping[float, pd.DataFrame],
+) -> Optional[BytesIO]:
+    if not REPORTLAB_AVAILABLE:
+        return None
+
+    output = BytesIO()
+    document = SimpleDocTemplate(
+        output,
+        pagesize=landscape(A4),
+        rightMargin=14 * mm,
+        leftMargin=14 * mm,
+        topMargin=12 * mm,
+        bottomMargin=12 * mm,
+        title="NVH Engineering Analysis Report",
+        author="NVH Engineering Suite",
+    )
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "CorporateTitle",
+        parent=styles["Title"],
+        alignment=TA_CENTER,
+        textColor=colors.HexColor("#17324D"),
+        fontSize=20,
+        leading=24,
+        spaceAfter=10,
+    )
+    heading_style = ParagraphStyle(
+        "CorporateHeading",
+        parent=styles["Heading2"],
+        textColor=colors.HexColor("#1768A6"),
+        fontSize=13,
+        leading=16,
+        spaceBefore=8,
+        spaceAfter=6,
+    )
+
+    story = [
+        Paragraph("NVH Engineering Analysis Report", title_style),
+        Paragraph(
+            f"VIN: {vehicle_information.get('VIN', 'N/A')} | "
+            f"{vehicle_information.get('Analysis Type', 'N/A')} | "
+            f"{vehicle_information.get('Vehicle Configuration', 'N/A')}",
+            styles["Normal"],
+        ),
+        Spacer(1, 8),
+        Paragraph("Executive Summary", heading_style),
+    ]
+
+    summary_data = [["Field", "Value"]]
+    for key in [
+        "VIN","Analysis Type","Fuel Type","Vehicle Configuration",
+        "Target Orders","Order Width","RPM Step","Samples per Rev",
+        "Revs per Block","Overlap","Max Order","Overall Assessment",
+    ]:
+        summary_data.append([key, str(vehicle_information.get(key, "N/A"))])
+
+    summary_table = Table(summary_data, colWidths=[55 * mm, 190 * mm], repeatRows=1)
+    summary_table.setStyle(TableStyle([
+        ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#17324D")),
+        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+        ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+        ("GRID",(0,0),(-1,-1),0.5,colors.HexColor("#CBD7DF")),
+        ("ROWBACKGROUNDS",(0,1),(-1,-1),[colors.white,colors.HexColor("#F3F6F9")]),
+        ("FONTSIZE",(0,0),(-1,-1),8.5),
+        ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+    ]))
+    story.extend([summary_table, PageBreak()])
+
+    for order_value, dataframe in results_by_order.items():
+        story.append(Paragraph(f"{order_value:.2f} Order Results", heading_style))
+        cols = [c for c in [
+            "Order Label","Harmonic","Channel","Peak RPM",
+            "Peak Amplitude [m/s²]","Target at Peak RPM [m/s²]",
+            "Max Margin [m/s²]","Max Margin [%]",
+            "Exceedance Area [m/s²·RPM]","Status",
+        ] if c in dataframe.columns]
+        data = [cols]
+        for _, row in dataframe[cols].iterrows():
+            data.append([
+                f"{v:.3f}" if isinstance(v,(float,np.floating)) and np.isfinite(v) else str(v)
+                for v in row.tolist()
+            ])
+        table = Table(data, repeatRows=1, hAlign="LEFT")
+        table.setStyle(TableStyle([
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#1768A6")),
+            ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+            ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+            ("GRID",(0,0),(-1,-1),0.4,colors.HexColor("#CBD7DF")),
+            ("ROWBACKGROUNDS",(0,1),(-1,-1),[colors.white,colors.HexColor("#F3F6F9")]),
+            ("FONTSIZE",(0,0),(-1,-1),7.2),
+        ]))
+        story.extend([table, Spacer(1, 10)])
+
+    document.build(story)
+    output.seek(0)
+    return output
 
 
 # =============================================================================
@@ -3126,6 +3269,45 @@ def display_order_result(
 
     metric_columns[3].metric("Assessment", status)
 
+    peak_rows = result_dataframe[
+        result_dataframe["Peak Amplitude [m/s²]"].notna()
+    ]
+
+    if not peak_rows.empty:
+        critical_row = peak_rows.loc[
+            peak_rows["Peak Amplitude [m/s²]"].astype(float).idxmax()
+        ]
+        target_value = critical_row.get("Target at Peak RPM [m/s²]", np.nan)
+        margin_value = critical_row.get("Max Margin [m/s²]", np.nan)
+
+        card_columns = st.columns(4)
+        card_values = [
+            ("Critical Channel", str(critical_row.get("Channel","N/A")),
+             "Highest measured response"),
+            ("Peak Response",
+             f"{float(critical_row['Peak Amplitude [m/s²]']):.2f} m/s²",
+             f"at {float(critical_row.get('Peak RPM', np.nan)):.0f} rpm"),
+            ("Target at Peak",
+             f"{float(target_value):.2f} m/s²" if pd.notna(target_value) else "N/A",
+             "Reference target level"),
+            ("Maximum Margin",
+             f"{float(margin_value):+.2f} m/s²" if pd.notna(margin_value) else "N/A",
+             f"Assessment: {status}"),
+        ]
+
+        for column, (title, value, caption) in zip(card_columns, card_values):
+            with column:
+                st.markdown(
+                    f"""
+<div class="result-summary-card">
+<div class="result-card-title">{title}</div>
+<div class="result-card-value">{value}</div>
+<div class="result-card-caption">{caption}</div>
+</div>
+""",
+                    unsafe_allow_html=True,
+                )
+
     render_interactive_order_chart(
         order_label=definition["label"],
         channel_curves=channel_curves,
@@ -3136,32 +3318,33 @@ def display_order_result(
         vehicle_configuration=result_vehicle_configuration,
     )
 
-    with st.expander(
-        "Static Engineering Plot",
-        expanded=False,
-    ):
-        st.caption(
-            "Static Matplotlib view used for report-style inspection."
-        )
+    if show_static_plots:
+        with st.expander(
+            "Static Engineering Plot",
+            expanded=False,
+        ):
+            st.caption(
+                "Static Matplotlib view used for report-style inspection."
+            )
 
-        figure = plot_order_comparison(
-            order_label=definition["label"],
-            channel_curves=channel_curves,
-            target_rpm=definition.get("target_rpm"),
-            target_amp=definition.get("target_amp"),
-            vin=result_vin,
-            analysis_type=result_analysis_type,
-            vehicle_configuration=result_vehicle_configuration,
-        )
+            figure = plot_order_comparison(
+                order_label=definition["label"],
+                channel_curves=channel_curves,
+                target_rpm=definition.get("target_rpm"),
+                target_amp=definition.get("target_amp"),
+                vin=result_vin,
+                analysis_type=result_analysis_type,
+                vehicle_configuration=result_vehicle_configuration,
+            )
 
-        st.pyplot(
-            figure,
-            width="stretch",
-        )
+            st.pyplot(
+                figure,
+                width="stretch",
+            )
 
-        plt.close(
-            figure
-        )
+            plt.close(
+                figure
+            )
 
     st.dataframe(
         result_dataframe,
@@ -3212,26 +3395,52 @@ if st.session_state.get("analysis_completed", False):
     with st.container(border=True):
         section_title(
             "Analysis Report",
-            "Download the complete calculation and compliance report.",
+            "Download complete calculation and compliance reports.",
         )
 
-        st.download_button(
-            label="Download Excel Report",
-            data=st.session_state[
-                "excel_report"
-            ],
-            file_name=(
-                f"{result_vin}_"
-                f"{result_analysis_type.replace(' ', '_')}"
-                "_report.xlsx"
-            ),
-            mime=(
-                "application/vnd.openxmlformats-officedocument."
-                "spreadsheetml.sheet"
-            ),
-            width="stretch",
-            key="download_excel_report",
-        )
+        report_columns = st.columns(2)
+
+        with report_columns[0]:
+            st.download_button(
+                label="Download Excel Report",
+                data=st.session_state["excel_report"],
+                file_name=(
+                    f"{result_vin}_"
+                    f"{result_analysis_type.replace(' ', '_')}"
+                    "_report.xlsx"
+                ),
+                mime=(
+                    "application/vnd.openxmlformats-officedocument."
+                    "spreadsheetml.sheet"
+                ),
+                width="stretch",
+                key="download_excel_report",
+            )
+
+        with report_columns[1]:
+            pdf_report = st.session_state.get("pdf_report")
+
+            if pdf_report is not None:
+                st.download_button(
+                    label=T["pdf"],
+                    data=pdf_report,
+                    file_name=(
+                        f"{result_vin}_"
+                        f"{result_analysis_type.replace(' ', '_')}"
+                        "_report.pdf"
+                    ),
+                    mime="application/pdf",
+                    width="stretch",
+                    key="download_pdf_report",
+                )
+            else:
+                st.button(
+                    T["pdf"],
+                    width="stretch",
+                    disabled=True,
+                    help="Add reportlab to requirements.txt to enable PDF reporting.",
+                    key="pdf_report_unavailable",
+                )
 
     if result_analysis_type == ANALYSIS_TRANSFER_CASE:
         order_results_tab, order_map_tab, raw_tab = st.tabs(
