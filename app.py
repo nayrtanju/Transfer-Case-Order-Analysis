@@ -32,6 +32,37 @@ st.set_page_config(
 
 
 # =============================================================================
+# UI THEME
+# =============================================================================
+theme_mode = st.sidebar.selectbox(
+    "Appearance",
+    ["Corporate Light", "Engineering Dark"],
+    index=0,
+    key="theme_mode",
+)
+
+if theme_mode == "Engineering Dark":
+    st.markdown("""
+<style>
+.stApp{background:#111827;color:#F3F4F6;}
+div[data-testid="stVerticalBlockBorderWrapper"]{
+background:#1F2937!important;
+border:1px solid #374151!important;
+}
+.section-title{
+color:#F3F4F6!important;
+border-left-color:#3B82F6!important;
+}
+div[data-testid="metric-container"]{
+background:#1F2937!important;
+border:1px solid #374151!important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+
+# =============================================================================
 # CONSTANTS
 # =============================================================================
 
