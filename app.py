@@ -732,7 +732,7 @@ def plot_order_comparison(
         "ChC": "#2E8B57",
     }
 
-    figure, axis = plt.subplots(
+        figure, axis = plt.subplots(
         figsize=(12.5, 7.2)
     )
 
@@ -744,120 +744,42 @@ def plot_order_comparison(
         "#FFFFFF"
     )
 
-    all_peak_candidates = []
+    image = axis.imshow(
+        decibels,
+        aspect="auto",
+        origin="lower",
+        extent=[
+            float(orders[0]),
+            float(orders[-1]),
+            float(sorted_rpm[0]),
+            float(sorted_rpm[-1]),
+        ],
+        interpolation="nearest",
+        cmap="turbo",
+    )
 
-    for channel_name, curve in channel_curves.items():
-        rpm_values = np.asarray(
-            curve["rpm"],
-            dtype=float,
-        )
+    colorbar = figure.colorbar(
+        image,
+        ax=axis,
+        pad=0.02,
+        fraction=0.035,
+    )
 
-        amplitude_values = np.asarray(
-            curve["amp"],
-            dtype=float,
-        )
+    colorbar.set_label(
+        "Amplitude [dB re 1 m/s²]",
+        fontsize=10,
+        fontweight="semibold",
+        color="#30485C",
+        labelpad=10,
+    )
 
-        color = channel_colors.get(
-            channel_name,
-            "#5B6770",
-        )
-
-        axis.plot(
-            rpm_values,
-            amplitude_values,
-            label=channel_name,
-            linewidth=2.4,
-            color=color,
-            solid_capstyle="round",
-            zorder=3,
-        )
-
-        if len(amplitude_values) > 0:
-            peak_index = int(
-                np.argmax(
-                    amplitude_values
-                )
-            )
-
-            all_peak_candidates.append(
-                {
-                    "channel": channel_name,
-                    "rpm": float(
-                        rpm_values[
-                            peak_index
-                        ]
-                    ),
-                    "amp": float(
-                        amplitude_values[
-                            peak_index
-                        ]
-                    ),
-                    "color": color,
-                }
-            )
-
-    if (
-        target_rpm is not None
-        and target_amp is not None
-    ):
-        axis.plot(
-            target_rpm,
-            target_amp,
-            label="Target",
-            linewidth=3.5,
-            color="#C0392B",
-            linestyle="--",
-            zorder=4,
-        )
-
-    if all_peak_candidates:
-        global_peak = max(
-            all_peak_candidates,
-            key=lambda item: item["amp"],
-        )
-
-        axis.scatter(
-            global_peak["rpm"],
-            global_peak["amp"],
-            s=70,
-            color=global_peak["color"],
-            edgecolor="#FFFFFF",
-            linewidth=1.5,
-            zorder=6,
-        )
-
-        axis.annotate(
-            (
-                f"{global_peak['channel']} Peak\n"
-                f"{global_peak['amp']:.2f} m/s² @ "
-                f"{global_peak['rpm']:.0f} rpm"
-            ),
-            xy=(
-                global_peak["rpm"],
-                global_peak["amp"],
-            ),
-            xytext=(
-                18,
-                18,
-            ),
-            textcoords="offset points",
-            fontsize=9,
-            color="#17324D",
-            bbox={
-                "boxstyle": "round,pad=0.35",
-                "facecolor": "#FFFFFF",
-                "edgecolor": "#CBD7DF",
-                "alpha": 0.95,
-            },
-            arrowprops={
-                "arrowstyle": "->",
-                "color": "#607585",
-                "lw": 1.0,
-            },
-        )
+    colorbar.ax.tick_params(
+        labelsize=9,
+        colors="#536979",
+    )
 
     axis.set_xlabel(
-        "Engine Speed [rpm]",
+        "Order",
         fontsize=11,
         fontweight="semibold",
         color="#30485C",
@@ -865,25 +787,15 @@ def plot_order_comparison(
     )
 
     axis.set_ylabel(
-        "Order Amplitude [m/s²]",
+        "Engine Speed [rpm]",
         fontsize=11,
         fontweight="semibold",
         color="#30485C",
         labelpad=10,
     )
 
-    title_text = (
-        f"{order_label} — Order Response"
-    )
-
-    subtitle_text = (
-        f"VIN: {vin}  |  "
-        f"{analysis_type}  |  "
-        f"{vehicle_configuration}"
-    )
-
     axis.set_title(
-        title_text,
+        f"Order Map / Waterfall — {selected_channel}",
         loc="left",
         fontsize=15,
         fontweight="bold",
@@ -894,34 +806,16 @@ def plot_order_comparison(
     axis.text(
         0.0,
         1.015,
-        subtitle_text,
+        (
+            f"VIN: {vin}  |  "
+            f"{analysis_type}  |  "
+            f"Max Order: {max_order:.0f}"
+        ),
         transform=axis.transAxes,
         fontsize=9.5,
         color="#6A7D8C",
         va="bottom",
         ha="left",
-    )
-
-    axis.grid(
-        True,
-        which="major",
-        linestyle="-",
-        linewidth=0.7,
-        color="#DCE4EA",
-        alpha=0.85,
-        zorder=0,
-    )
-
-    axis.minorticks_on()
-
-    axis.grid(
-        True,
-        which="minor",
-        linestyle=":",
-        linewidth=0.45,
-        color="#E9EEF2",
-        alpha=0.7,
-        zorder=0,
     )
 
     axis.tick_params(
@@ -946,28 +840,8 @@ def plot_order_comparison(
         "#AEBCC7"
     )
 
-    axis.legend(
-        loc="upper left",
-        bbox_to_anchor=(
-            0.0,
-            1.0,
-        ),
-        frameon=True,
-        fancybox=True,
-        framealpha=0.95,
-        facecolor="#FFFFFF",
-        edgecolor="#DCE4EA",
-        fontsize=9.5,
-        ncol=4,
-    )
-
-    axis.margins(
-        x=0.02,
-        y=0.08,
-    )
-
     figure.tight_layout(
-        pad=2.2
+        pad=2.0
     )
 
     return figure
