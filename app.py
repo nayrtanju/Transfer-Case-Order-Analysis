@@ -2362,16 +2362,19 @@ def render_interactive_order_chart(
                 },
             },
             xaxis={
-                "title": "Engine Speed [rpm]",
+                "title": {
+                    "text": "Engine Speed [rpm]",
+                    "font": {
+                        "color": "#30485C",
+                        "size": 13,
+                    },
+                },
                 "showgrid": True,
                 "gridcolor": "#DCE4EA",
                 "zeroline": False,
                 "linecolor": "#AEBCC7",
                 "tickfont": {
                     "color": "#536979",
-                },
-                "titlefont": {
-                    "color": "#30485C",
                 },
                 "showspikes": True,
                 "spikemode": "across",
@@ -2385,16 +2388,19 @@ def render_interactive_order_chart(
                 },
             },
             yaxis={
-                "title": "Order Amplitude [m/s²]",
+                "title": {
+                    "text": "Order Amplitude [m/s²]",
+                    "font": {
+                        "color": "#30485C",
+                        "size": 13,
+                    },
+                },
                 "showgrid": True,
                 "gridcolor": "#DCE4EA",
                 "zeroline": False,
                 "linecolor": "#AEBCC7",
                 "tickfont": {
                     "color": "#536979",
-                },
-                "titlefont": {
-                    "color": "#30485C",
                 },
                 "rangemode": "tozero",
             },
@@ -2406,11 +2412,8 @@ def render_interactive_order_chart(
         )
 
         figure.update_xaxes(
-            minor={
-                "showgrid": True,
-                "gridcolor": "#EEF2F5",
-                "griddash": "dot",
-            }
+            showgrid=True,
+            gridcolor="#DCE4EA",
         )
 
         st.plotly_chart(
@@ -2759,25 +2762,31 @@ def render_interactive_order_map(
         paper_bgcolor="#F5F7FA",
         plot_bgcolor="#FFFFFF",
         xaxis={
-            "title": "Order",
+            "title": {
+                "text": "Order",
+                "font": {
+                    "color": "#30485C",
+                    "size": 13,
+                },
+            },
             "showgrid": False,
             "linecolor": "#AEBCC7",
             "tickfont": {
                 "color": "#536979",
-            },
-            "titlefont": {
-                "color": "#30485C",
             },
         },
         yaxis={
-            "title": "Engine Speed [rpm]",
+            "title": {
+                "text": "Engine Speed [rpm]",
+                "font": {
+                    "color": "#30485C",
+                    "size": 13,
+                },
+            },
             "showgrid": False,
             "linecolor": "#AEBCC7",
             "tickfont": {
                 "color": "#536979",
-            },
-            "titlefont": {
-                "color": "#30485C",
             },
         },
         modebar={
