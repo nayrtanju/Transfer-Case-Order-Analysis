@@ -10,6 +10,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import streamlit as st
+
+try:
+    import plotly.graph_objects as go
+except ImportError:
+    go = None
 from openpyxl.drawing.image import Image as XLImage
 from openpyxl.styles import Font, PatternFill
 
@@ -2118,13 +2123,19 @@ def render_interactive_order_chart(
     vehicle_configuration: str,
 ) -> None:
     """
-    Render an interactive order-response chart with hover inspection,
-    zooming and panning.
+    Render a Plotly-first engineering chart with unified hover,
+    zoom, pan, legend control and image export.
 
-    Altair is installed with Streamlit, so this feature does not require
-    an additional package in requirements.txt.
+    When Plotly is unavailable, the app falls back to Altair so the
+    analysis workflow remains usable.
     """
-    chart_frames = []
+    channel_colors = {
+        "ChA": "#1768A6",
+        "ChB": "#E67E22",
+        "ChC": "#2E8B57",
+    }
+
+    valid_curves = {}
 
     for channel_name, curve in channel_curves.items():
         rpm_values = np.asarray(
@@ -2142,14 +2153,313 @@ def render_interactive_order_chart(
             & np.isfinite(amplitude_values)
         )
 
-        if not np.any(valid_mask):
-            continue
+        if np.any(valid_mask):
+            valid_curves[channel_name] = {
+                "rpm": rpm_values[valid_mask],
+                "amp": amplitude_values[valid_mask],
+            }
 
+    if not valid_curves:
+        st.warning(
+            "No valid curve data are available for the interactive chart."
+        )
+        return
+
+    if go is not None:
+        figure = go.Figure()
+
+        for channel_name, curve in valid_curves.items():
+            figure.add_trace(
+                go.Scatter(
+                    x=curve["rpm"],
+                    y=curve["amp"],
+                    mode="lines",
+                    name=channel_name,
+                    line={
+                        "color": channel_colors.get(
+                            channel_name,
+                            "#5B6770",
+                        ),
+                        "width": 2.6,
+                    },
+                    hovertemplate=(
+                        f"<b>{channel_name}</b><br>"
+                        "RPM: %{x:.0f}<br>"
+                        "Amplitude: %{y:.3f} m/s²"
+                        "<extra></extra>"
+                    ),
+                )
+            )
+
+        if (
+            target_rpm is not None
+            and target_amp is not None
+        ):
+            target_rpm_values = np.asarray(
+                target_rpm,
+                dtype=float,
+            )
+
+            target_amp_values = np.asarray(
+                target_amp,
+                dtype=float,
+            )
+
+            target_mask = (
+                np.isfinite(target_rpm_values)
+                & np.isfinite(target_amp_values)
+            )
+
+            if np.any(target_mask):
+                figure.add_trace(
+                    go.Scatter(
+                        x=target_rpm_values[target_mask],
+                        y=target_amp_values[target_mask],
+                        mode="lines",
+                        name="Target",
+                        line={
+                            "color": "#C0392B",
+                            "width": 3.5,
+                            "dash": "dash",
+                        },
+                        hovertemplate=(
+                            "<b>Target</b><br>"
+                            "RPM: %{x:.0f}<br>"
+                            "Target: %{y:.3f} m/s²"
+                            "<extra></extra>"
+                        ),
+                    )
+                )
+
+        peak_candidates = []
+
+        for channel_name, curve in valid_curves.items():
+            peak_index = int(
+                np.argmax(
+                    curve["amp"]
+                )
+            )
+
+            peak_candidates.append(
+                {
+                    "channel": channel_name,
+                    "rpm": float(
+                        curve["rpm"][
+                            peak_index
+                        ]
+                    ),
+                    "amp": float(
+                        curve["amp"][
+                            peak_index
+                        ]
+                    ),
+                }
+            )
+
+        if peak_candidates:
+            global_peak = max(
+                peak_candidates,
+                key=lambda item: item["amp"],
+            )
+
+            figure.add_trace(
+                go.Scatter(
+                    x=[
+                        global_peak["rpm"]
+                    ],
+                    y=[
+                        global_peak["amp"]
+                    ],
+                    mode="markers",
+                    name="Global Peak",
+                    marker={
+                        "size": 11,
+                        "color": channel_colors.get(
+                            global_peak["channel"],
+                            "#17324D",
+                        ),
+                        "line": {
+                            "color": "#FFFFFF",
+                            "width": 1.5,
+                        },
+                    },
+                    hovertemplate=(
+                        f"<b>{global_peak['channel']} Global Peak</b><br>"
+                        "RPM: %{x:.0f}<br>"
+                        "Amplitude: %{y:.3f} m/s²"
+                        "<extra></extra>"
+                    ),
+                    showlegend=False,
+                )
+            )
+
+            figure.add_annotation(
+                x=global_peak["rpm"],
+                y=global_peak["amp"],
+                text=(
+                    f"<b>{global_peak['channel']} Peak</b><br>"
+                    f"{global_peak['amp']:.2f} m/s² @ "
+                    f"{global_peak['rpm']:.0f} rpm"
+                ),
+                showarrow=True,
+                arrowhead=2,
+                arrowsize=1,
+                arrowwidth=1.2,
+                arrowcolor="#607585",
+                ax=68,
+                ay=-52,
+                bgcolor="rgba(255,255,255,0.96)",
+                bordercolor="#CBD7DF",
+                borderwidth=1,
+                borderpad=6,
+                font={
+                    "color": "#17324D",
+                    "size": 11,
+                },
+            )
+
+        figure.update_layout(
+            title={
+                "text": (
+                    f"<b>{order_label} — Interactive Order Response</b>"
+                    f"<br><sup>VIN: {vin} &nbsp; | &nbsp; "
+                    f"{analysis_type} &nbsp; | &nbsp; "
+                    f"{vehicle_configuration}</sup>"
+                ),
+                "x": 0.01,
+                "xanchor": "left",
+                "font": {
+                    "size": 18,
+                    "color": "#17324D",
+                },
+            },
+            height=590,
+            margin={
+                "l": 70,
+                "r": 30,
+                "t": 95,
+                "b": 65,
+            },
+            paper_bgcolor="#F5F7FA",
+            plot_bgcolor="#FFFFFF",
+            hovermode="x unified",
+            hoverlabel={
+                "bgcolor": "#FFFFFF",
+                "bordercolor": "#CBD7DF",
+                "font": {
+                    "color": "#17324D",
+                    "size": 12,
+                },
+            },
+            legend={
+                "orientation": "h",
+                "yanchor": "bottom",
+                "y": 1.01,
+                "xanchor": "right",
+                "x": 1.0,
+                "font": {
+                    "color": "#30485C",
+                },
+            },
+            xaxis={
+                "title": "Engine Speed [rpm]",
+                "showgrid": True,
+                "gridcolor": "#DCE4EA",
+                "zeroline": False,
+                "linecolor": "#AEBCC7",
+                "tickfont": {
+                    "color": "#536979",
+                },
+                "titlefont": {
+                    "color": "#30485C",
+                },
+                "showspikes": True,
+                "spikemode": "across",
+                "spikesnap": "cursor",
+                "spikecolor": "#607585",
+                "spikedash": "dot",
+                "spikethickness": 1,
+                "rangeslider": {
+                    "visible": True,
+                    "thickness": 0.07,
+                },
+            },
+            yaxis={
+                "title": "Order Amplitude [m/s²]",
+                "showgrid": True,
+                "gridcolor": "#DCE4EA",
+                "zeroline": False,
+                "linecolor": "#AEBCC7",
+                "tickfont": {
+                    "color": "#536979",
+                },
+                "titlefont": {
+                    "color": "#30485C",
+                },
+                "rangemode": "tozero",
+            },
+            modebar={
+                "bgcolor": "rgba(255,255,255,0.75)",
+                "color": "#607585",
+                "activecolor": "#1768A6",
+            },
+        )
+
+        figure.update_xaxes(
+            minor={
+                "showgrid": True,
+                "gridcolor": "#EEF2F5",
+                "griddash": "dot",
+            }
+        )
+
+        st.plotly_chart(
+            figure,
+            width="stretch",
+            config={
+                "displaylogo": False,
+                "scrollZoom": True,
+                "responsive": True,
+                "toImageButtonOptions": {
+                    "format": "png",
+                    "filename": (
+                        f"{vin}_{order_label.replace(' ', '_')}"
+                    ),
+                    "height": 720,
+                    "width": 1280,
+                    "scale": 2,
+                },
+                "modeBarButtonsToRemove": [
+                    "lasso2d",
+                    "select2d",
+                ],
+            },
+            key=(
+                f"plotly_order_"
+                f"{order_label}_"
+                f"{vin}"
+            ),
+        )
+
+        st.caption(
+            "Use the toolbar to zoom, pan, reset the axes or export the "
+            "current graph as a PNG image. Click legend items to hide or "
+            "restore individual curves."
+        )
+        return
+
+    # -------------------------------------------------------------------------
+    # Altair fallback
+    # -------------------------------------------------------------------------
+
+    chart_frames = []
+
+    for channel_name, curve in valid_curves.items():
         chart_frames.append(
             pd.DataFrame(
                 {
-                    "RPM": rpm_values[valid_mask],
-                    "Amplitude": amplitude_values[valid_mask],
+                    "RPM": curve["rpm"],
+                    "Amplitude": curve["amp"],
                     "Series": channel_name,
                     "Series Type": "Measured",
                 }
@@ -2170,20 +2480,20 @@ def render_interactive_order_chart(
             dtype=float,
         )
 
-        target_valid_mask = (
+        target_mask = (
             np.isfinite(target_rpm_values)
             & np.isfinite(target_amp_values)
         )
 
-        if np.any(target_valid_mask):
+        if np.any(target_mask):
             chart_frames.append(
                 pd.DataFrame(
                     {
                         "RPM": target_rpm_values[
-                            target_valid_mask
+                            target_mask
                         ],
                         "Amplitude": target_amp_values[
-                            target_valid_mask
+                            target_mask
                         ],
                         "Series": "Target",
                         "Series Type": "Target",
@@ -2191,35 +2501,17 @@ def render_interactive_order_chart(
                 )
             )
 
-    if not chart_frames:
-        st.warning(
-            "No valid curve data are available for the interactive chart."
-        )
-        return
-
     chart_data = pd.concat(
         chart_frames,
         ignore_index=True,
     )
 
-    channel_domain = [
-        "ChA",
-        "ChB",
-        "ChC",
-        "Target",
-    ]
-
-    channel_range = [
-        "#1768A6",
-        "#E67E22",
-        "#2E8B57",
-        "#C0392B",
-    ]
-
     nearest = alt.selection_point(
         nearest=True,
         on="pointerover",
-        fields=["RPM"],
+        fields=[
+            "RPM"
+        ],
         empty=False,
         clear="pointerout",
     )
@@ -2230,81 +2522,40 @@ def render_interactive_order_chart(
         x=alt.X(
             "RPM:Q",
             title="Engine Speed [rpm]",
-            axis=alt.Axis(
-                grid=True,
-                gridColor="#DCE4EA",
-                labelColor="#536979",
-                titleColor="#30485C",
-                tickColor="#AEBCC7",
-                domainColor="#AEBCC7",
-            ),
         ),
         y=alt.Y(
             "Amplitude:Q",
             title="Order Amplitude [m/s²]",
-            scale=alt.Scale(
-                zero=True,
-                nice=True,
-            ),
-            axis=alt.Axis(
-                grid=True,
-                gridColor="#DCE4EA",
-                labelColor="#536979",
-                titleColor="#30485C",
-                tickColor="#AEBCC7",
-                domainColor="#AEBCC7",
-            ),
         ),
         color=alt.Color(
             "Series:N",
-            title=None,
             scale=alt.Scale(
-                domain=channel_domain,
-                range=channel_range,
-            ),
-            legend=alt.Legend(
-                orient="top",
-                direction="horizontal",
-                title=None,
-                labelColor="#30485C",
+                domain=[
+                    "ChA",
+                    "ChB",
+                    "ChC",
+                    "Target",
+                ],
+                range=[
+                    "#1768A6",
+                    "#E67E22",
+                    "#2E8B57",
+                    "#C0392B",
+                ],
             ),
         ),
         strokeDash=alt.StrokeDash(
             "Series Type:N",
-            title=None,
-            scale=alt.Scale(
-                domain=[
-                    "Measured",
-                    "Target",
-                ],
-                range=[
-                    [1, 0],
-                    [8, 5],
-                ],
-            ),
             legend=None,
         ),
     )
 
     lines = base.mark_line(
         strokeWidth=2.4,
-        interpolate="linear",
     )
 
-    selectors = alt.Chart(
-        chart_data
-    ).mark_point(
-        opacity=0,
-    ).encode(
-        x="RPM:Q",
-    ).add_params(
-        nearest
-    )
-
-    hover_points = base.mark_circle(
-        size=72,
-        stroke="#FFFFFF",
-        strokeWidth=1.4,
+    points = base.mark_circle(
+        size=70,
     ).encode(
         opacity=alt.condition(
             nearest,
@@ -2312,88 +2563,264 @@ def render_interactive_order_chart(
             alt.value(0),
         ),
         tooltip=[
-            alt.Tooltip(
-                "Series:N",
-                title="Series",
-            ),
+            "Series:N",
             alt.Tooltip(
                 "RPM:Q",
-                title="RPM",
                 format=".0f",
             ),
             alt.Tooltip(
                 "Amplitude:Q",
-                title="Amplitude [m/s²]",
                 format=".3f",
             ),
         ],
-    )
-
-    rule = alt.Chart(
-        chart_data
-    ).mark_rule(
-        color="#607585",
-        strokeDash=[3, 3],
-    ).encode(
-        x="RPM:Q",
-        opacity=alt.condition(
-            nearest,
-            alt.value(0.55),
-            alt.value(0),
-        ),
-    ).transform_filter(
+    ).add_params(
         nearest
     )
 
-    chart = (
+    fallback_chart = (
         alt.layer(
             lines,
-            selectors,
-            hover_points,
-            rule,
+            points,
         )
         .properties(
             height=520,
-            title=alt.TitleParams(
-                text=f"{order_label} — Interactive Order Response",
-                subtitle=[
-                    f"VIN: {vin}",
-                    f"{analysis_type} | {vehicle_configuration}",
-                    "Hover to inspect values. Scroll to zoom and drag to pan.",
-                ],
-                anchor="start",
-                color="#17324D",
-                fontSize=17,
-                fontWeight=700,
-                subtitleColor="#6A7D8C",
-                subtitleFontSize=11,
-                offset=16,
+            title=(
+                f"{order_label} — Interactive Order Response"
             ),
-        )
-        .configure_view(
-            stroke="#DCE4EA",
-            fill="#FFFFFF",
-            cornerRadius=8,
-        )
-        .configure_axis(
-            labelFontSize=11,
-            titleFontSize=12,
-            titleFontWeight=600,
-        )
-        .configure_legend(
-            labelFontSize=11,
-            symbolStrokeWidth=3,
         )
         .interactive(
             bind_y=False,
         )
     )
 
+    st.warning(
+        "Plotly is not installed. The chart is being displayed with "
+        "the Altair fallback. Add 'plotly' to requirements.txt to enable "
+        "the full engineering toolbar and image export."
+    )
+
     st.altair_chart(
-        chart,
+        fallback_chart,
         width="stretch",
         theme=None,
     )
+
+def render_interactive_order_map(
+    time: np.ndarray,
+    rpm: np.ndarray,
+    signal: np.ndarray,
+    selected_channel: str,
+    analysis_type: str,
+    vin: str,
+    samples_per_rev: int,
+    revs_per_block: int,
+    overlap: float,
+    max_order: float,
+    calibration_factor: float,
+) -> bool:
+    """
+    Render an interactive Plotly order map.
+
+    Returns True when the Plotly chart is rendered and False when Plotly
+    is unavailable, allowing the caller to use the static fallback.
+    """
+    if go is None:
+        return False
+
+    engine_angular_resample = (
+        tc_angular_resample
+        if analysis_type == ANALYSIS_TRANSFER_CASE
+        else axle_angular_resample
+    )
+
+    engine_order_map = (
+        tc_order_map
+        if analysis_type == ANALYSIS_TRANSFER_CASE
+        else axle_order_map
+    )
+
+    theta_u, signal_u, rpm_u = engine_angular_resample(
+        time,
+        rpm,
+        signal,
+        samples_per_rev=samples_per_rev,
+    )
+
+    orders, block_rpms, spectrum = engine_order_map(
+        theta_u,
+        signal_u,
+        rpm_u,
+        samples_per_rev=samples_per_rev,
+        revs_per_block=revs_per_block,
+        overlap=overlap,
+        max_order=max_order,
+    )
+
+    orders = np.asarray(
+        orders,
+        dtype=float,
+    )
+
+    block_rpms = np.asarray(
+        block_rpms,
+        dtype=float,
+    )
+
+    spectrum = np.asarray(
+        spectrum,
+        dtype=float,
+    )
+
+    if spectrum.ndim != 2:
+        raise ValueError(
+            "Order spectrum must be two-dimensional."
+        )
+
+    if spectrum.shape != (
+        len(block_rpms),
+        len(orders),
+    ):
+        raise ValueError(
+            "Order spectrum dimensions do not match the RPM and order axes."
+        )
+
+    sort_index = np.argsort(
+        block_rpms,
+        kind="stable",
+    )
+
+    sorted_rpm = block_rpms[
+        sort_index
+    ]
+
+    sorted_spectrum = spectrum[
+        sort_index,
+        :
+    ]
+
+    decibels = 20.0 * np.log10(
+        np.maximum(
+            sorted_spectrum
+            * calibration_factor,
+            1e-12,
+        )
+    )
+
+    figure = go.Figure(
+        data=go.Heatmap(
+            x=orders,
+            y=sorted_rpm,
+            z=decibels,
+            colorscale="Turbo",
+            colorbar={
+                "title": {
+                    "text": "dB re 1 m/s²",
+                    "side": "right",
+                },
+                "tickfont": {
+                    "color": "#536979",
+                },
+                "outlinecolor": "#CBD7DF",
+                "outlinewidth": 1,
+            },
+            hovertemplate=(
+                "<b>Order Map</b><br>"
+                "Order: %{x:.2f}<br>"
+                "RPM: %{y:.0f}<br>"
+                "Amplitude: %{z:.2f} dB"
+                "<extra></extra>"
+            ),
+            zsmooth=False,
+        )
+    )
+
+    figure.update_layout(
+        title={
+            "text": (
+                f"<b>Order Map / Waterfall — {selected_channel}</b>"
+                f"<br><sup>VIN: {vin} &nbsp; | &nbsp; "
+                f"{analysis_type} &nbsp; | &nbsp; "
+                f"Max Order: {max_order:.0f}</sup>"
+            ),
+            "x": 0.01,
+            "xanchor": "left",
+            "font": {
+                "size": 18,
+                "color": "#17324D",
+            },
+        },
+        height=640,
+        margin={
+            "l": 75,
+            "r": 80,
+            "t": 95,
+            "b": 70,
+        },
+        paper_bgcolor="#F5F7FA",
+        plot_bgcolor="#FFFFFF",
+        xaxis={
+            "title": "Order",
+            "showgrid": False,
+            "linecolor": "#AEBCC7",
+            "tickfont": {
+                "color": "#536979",
+            },
+            "titlefont": {
+                "color": "#30485C",
+            },
+        },
+        yaxis={
+            "title": "Engine Speed [rpm]",
+            "showgrid": False,
+            "linecolor": "#AEBCC7",
+            "tickfont": {
+                "color": "#536979",
+            },
+            "titlefont": {
+                "color": "#30485C",
+            },
+        },
+        modebar={
+            "bgcolor": "rgba(255,255,255,0.75)",
+            "color": "#607585",
+            "activecolor": "#1768A6",
+        },
+    )
+
+    st.plotly_chart(
+        figure,
+        width="stretch",
+        config={
+            "displaylogo": False,
+            "scrollZoom": True,
+            "responsive": True,
+            "toImageButtonOptions": {
+                "format": "png",
+                "filename": (
+                    f"{vin}_{selected_channel}_order_map"
+                ),
+                "height": 720,
+                "width": 1280,
+                "scale": 2,
+            },
+            "modeBarButtonsToRemove": [
+                "lasso2d",
+                "select2d",
+            ],
+        },
+        key=(
+            f"plotly_order_map_"
+            f"{selected_channel}_"
+            f"{vin}"
+        ),
+    )
+
+    st.caption(
+        "Hover over the heatmap to inspect exact Order, RPM and dB values. "
+        "Use the toolbar to zoom, pan, reset or export the current view."
+    )
+
+    return True
 
 
 def display_order_result(
@@ -2592,23 +3019,76 @@ if st.session_state.get("analysis_completed", False):
             section_title(
                 f"Order Map / Waterfall — {result_channel}"
             )
-            map_figure = create_order_map_figure(
+            interactive_map_rendered = render_interactive_order_map(
                 time=result_time,
                 rpm=result_rpm,
-                signal=result_channels[result_channel],
+                signal=result_channels[
+                    result_channel
+                ],
                 selected_channel=result_channel,
                 analysis_type=result_analysis_type,
                 vin=result_vin,
-                samples_per_rev=result_settings["samples_per_rev"],
-                revs_per_block=result_settings["revs_per_block"],
-                overlap=result_settings["overlap"],
-                max_order=result_settings["max_order"],
+                samples_per_rev=result_settings[
+                    "samples_per_rev"
+                ],
+                revs_per_block=result_settings[
+                    "revs_per_block"
+                ],
+                overlap=result_settings[
+                    "overlap"
+                ],
+                max_order=result_settings[
+                    "max_order"
+                ],
                 calibration_factor=result_settings[
                     "calibration_factor"
                 ],
             )
-            st.pyplot(map_figure, width="stretch")
-            plt.close(map_figure)
+
+            with st.expander(
+                "Static Engineering Waterfall",
+                expanded=not interactive_map_rendered,
+            ):
+                if not interactive_map_rendered:
+                    st.warning(
+                        "Plotly is not installed. Displaying the static "
+                        "Matplotlib waterfall."
+                    )
+
+                map_figure = create_order_map_figure(
+                    time=result_time,
+                    rpm=result_rpm,
+                    signal=result_channels[
+                        result_channel
+                    ],
+                    selected_channel=result_channel,
+                    analysis_type=result_analysis_type,
+                    vin=result_vin,
+                    samples_per_rev=result_settings[
+                        "samples_per_rev"
+                    ],
+                    revs_per_block=result_settings[
+                        "revs_per_block"
+                    ],
+                    overlap=result_settings[
+                        "overlap"
+                    ],
+                    max_order=result_settings[
+                        "max_order"
+                    ],
+                    calibration_factor=result_settings[
+                        "calibration_factor"
+                    ],
+                )
+
+                st.pyplot(
+                    map_figure,
+                    width="stretch",
+                )
+
+                plt.close(
+                    map_figure
+                )
 
     with raw_tab:
         for order_value, curve_dataframe in result_raw_curves.items():
