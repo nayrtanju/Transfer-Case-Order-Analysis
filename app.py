@@ -714,7 +714,6 @@ def analyze_axle_orders(
 # =============================================================================
 # PLOTTING
 # =============================================================================
-
 def plot_order_comparison(
     order_label: str,
     channel_curves: Mapping[str, dict],
@@ -724,124 +723,254 @@ def plot_order_comparison(
     analysis_type: str,
     vehicle_configuration: str,
 ):
-    figure, axis = plt.subplots(figsize=(12, 7))
+    """
+    Create a corporate-style order-vs-RPM comparison plot.
+    """
+    channel_colors = {
+        "ChA": "#1768A6",
+        "ChB": "#E67E22",
+        "ChC": "#2E8B57",
+    }
+
+    figure, axis = plt.subplots(
+        figsize=(12.5, 7.2)
+    )
+
+    figure.patch.set_facecolor(
+        "#F5F7FA"
+    )
+
+    axis.set_facecolor(
+        "#FFFFFF"
+    )
+
+    all_peak_candidates = []
 
     for channel_name, curve in channel_curves.items():
-        axis.plot(
+        rpm_values = np.asarray(
             curve["rpm"],
-            curve["amp"],
-            label=channel_name,
-            linewidth=2,
+            dtype=float,
         )
 
-    if target_rpm is not None and target_amp is not None:
+        amplitude_values = np.asarray(
+            curve["amp"],
+            dtype=float,
+        )
+
+        color = channel_colors.get(
+            channel_name,
+            "#5B6770",
+        )
+
+        axis.plot(
+            rpm_values,
+            amplitude_values,
+            label=channel_name,
+            linewidth=2.4,
+            color=color,
+            solid_capstyle="round",
+            zorder=3,
+        )
+
+        if len(amplitude_values) > 0:
+            peak_index = int(
+                np.argmax(
+                    amplitude_values
+                )
+            )
+
+            all_peak_candidates.append(
+                {
+                    "channel": channel_name,
+                    "rpm": float(
+                        rpm_values[
+                            peak_index
+                        ]
+                    ),
+                    "amp": float(
+                        amplitude_values[
+                            peak_index
+                        ]
+                    ),
+                    "color": color,
+                }
+            )
+
+    if (
+        target_rpm is not None
+        and target_amp is not None
+    ):
         axis.plot(
             target_rpm,
             target_amp,
-            label="Target Curve",
-            linewidth=4,
+            label="Target",
+            linewidth=3.5,
+            color="#C0392B",
+            linestyle="--",
+            zorder=4,
         )
 
-    axis.set_xlabel("RPM")
-    axis.set_ylabel("Order Amplitude [m/s²]")
-    axis.set_title(
-        f"{order_label} vs RPM | VIN: {vin} | "
-        f"{analysis_type} | {vehicle_configuration}"
-    )
-    axis.grid(True, alpha=0.3)
-    axis.legend()
-    figure.tight_layout()
-    return figure
-
-
-def create_order_map_figure(
-    time: np.ndarray,
-    rpm: np.ndarray,
-    signal: np.ndarray,
-    selected_channel: str,
-    analysis_type: str,
-    vin: str,
-    samples_per_rev: int,
-    revs_per_block: int,
-    overlap: float,
-    max_order: float,
-    calibration_factor: float,
-):
-    engine_angular_resample = (
-        tc_angular_resample
-        if analysis_type == ANALYSIS_TRANSFER_CASE
-        else axle_angular_resample
-    )
-    engine_order_map = (
-        tc_order_map
-        if analysis_type == ANALYSIS_TRANSFER_CASE
-        else axle_order_map
-    )
-
-    theta_u, signal_u, rpm_u = engine_angular_resample(
-        time,
-        rpm,
-        signal,
-        samples_per_rev=samples_per_rev,
-    )
-
-    orders, block_rpms, spectrum = engine_order_map(
-        theta_u,
-        signal_u,
-        rpm_u,
-        samples_per_rev=samples_per_rev,
-        revs_per_block=revs_per_block,
-        overlap=overlap,
-        max_order=max_order,
-    )
-
-    orders = np.asarray(orders, dtype=float)
-    block_rpms = np.asarray(block_rpms, dtype=float)
-    spectrum = np.asarray(spectrum, dtype=float)
-
-    if spectrum.ndim != 2:
-        raise ValueError("Order spectrum must be two-dimensional.")
-
-    sort_index = np.argsort(block_rpms)
-    sorted_rpm = block_rpms[sort_index]
-    sorted_spectrum = spectrum[sort_index, :]
-
-    decibels = 20.0 * np.log10(
-        np.maximum(
-            sorted_spectrum * calibration_factor,
-            1e-12,
+    if all_peak_candidates:
+        global_peak = max(
+            all_peak_candidates,
+            key=lambda item: item["amp"],
         )
+
+        axis.scatter(
+            global_peak["rpm"],
+            global_peak["amp"],
+            s=70,
+            color=global_peak["color"],
+            edgecolor="#FFFFFF",
+            linewidth=1.5,
+            zorder=6,
+        )
+
+        axis.annotate(
+            (
+                f"{global_peak['channel']} Peak\n"
+                f"{global_peak['amp']:.2f} m/s² @ "
+                f"{global_peak['rpm']:.0f} rpm"
+            ),
+            xy=(
+                global_peak["rpm"],
+                global_peak["amp"],
+            ),
+            xytext=(
+                18,
+                18,
+            ),
+            textcoords="offset points",
+            fontsize=9,
+            color="#17324D",
+            bbox={
+                "boxstyle": "round,pad=0.35",
+                "facecolor": "#FFFFFF",
+                "edgecolor": "#CBD7DF",
+                "alpha": 0.95,
+            },
+            arrowprops={
+                "arrowstyle": "->",
+                "color": "#607585",
+                "lw": 1.0,
+            },
+        )
+
+    axis.set_xlabel(
+        "Engine Speed [rpm]",
+        fontsize=11,
+        fontweight="semibold",
+        color="#30485C",
+        labelpad=10,
     )
 
-    figure, axis = plt.subplots(figsize=(12, 7))
-    image = axis.imshow(
-        decibels,
-        aspect="auto",
-        origin="lower",
-        extent=[
-            float(orders[0]),
-            float(orders[-1]),
-            float(sorted_rpm[0]),
-            float(sorted_rpm[-1]),
-        ],
-        interpolation="nearest",
-        cmap="jet",
+    axis.set_ylabel(
+        "Order Amplitude [m/s²]",
+        fontsize=11,
+        fontweight="semibold",
+        color="#30485C",
+        labelpad=10,
     )
 
-    figure.colorbar(
-        image,
-        ax=axis,
-        label="Amplitude [dB re 1 m/s²]",
+    title_text = (
+        f"{order_label} — Order Response"
     )
-    axis.set_xlabel("Order")
-    axis.set_ylabel("RPM")
+
+    subtitle_text = (
+        f"VIN: {vin}  |  "
+        f"{analysis_type}  |  "
+        f"{vehicle_configuration}"
+    )
+
     axis.set_title(
-        f"Order Map / Waterfall - {selected_channel} | "
-        f"VIN: {vin} | {analysis_type}"
+        title_text,
+        loc="left",
+        fontsize=15,
+        fontweight="bold",
+        color="#17324D",
+        pad=24,
     )
-    figure.tight_layout()
-    return figure
 
+    axis.text(
+        0.0,
+        1.015,
+        subtitle_text,
+        transform=axis.transAxes,
+        fontsize=9.5,
+        color="#6A7D8C",
+        va="bottom",
+        ha="left",
+    )
+
+    axis.grid(
+        True,
+        which="major",
+        linestyle="-",
+        linewidth=0.7,
+        color="#DCE4EA",
+        alpha=0.85,
+        zorder=0,
+    )
+
+    axis.minorticks_on()
+
+    axis.grid(
+        True,
+        which="minor",
+        linestyle=":",
+        linewidth=0.45,
+        color="#E9EEF2",
+        alpha=0.7,
+        zorder=0,
+    )
+
+    axis.tick_params(
+        axis="both",
+        labelsize=9.5,
+        colors="#536979",
+    )
+
+    axis.spines["top"].set_visible(
+        False
+    )
+
+    axis.spines["right"].set_visible(
+        False
+    )
+
+    axis.spines["left"].set_color(
+        "#AEBCC7"
+    )
+
+    axis.spines["bottom"].set_color(
+        "#AEBCC7"
+    )
+
+    axis.legend(
+        loc="upper left",
+        bbox_to_anchor=(
+            0.0,
+            1.0,
+        ),
+        frameon=True,
+        fancybox=True,
+        framealpha=0.95,
+        facecolor="#FFFFFF",
+        edgecolor="#DCE4EA",
+        fontsize=9.5,
+        ncol=4,
+    )
+
+    axis.margins(
+        x=0.02,
+        y=0.08,
+    )
+
+    figure.tight_layout(
+        pad=2.2
+    )
+
+    return figure
 
 # =============================================================================
 # EXCEL REPORT
