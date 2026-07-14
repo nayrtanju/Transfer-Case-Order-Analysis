@@ -57,6 +57,118 @@ div[data-testid="metric-container"]{
 background:#1F2937!important;
 border:1px solid #374151!important;
 }
+
+
+/* ---------------------------------------------------------
+   PROFESSIONAL SIDEBAR NAVIGATION
+--------------------------------------------------------- */
+
+section[data-testid="stSidebar"] {
+    background:
+        linear-gradient(
+            180deg,
+            #0B1F33 0%,
+            #102D49 52%,
+            #123A63 100%
+        );
+    border-right: 1px solid rgba(255,255,255,0.08);
+}
+
+section[data-testid="stSidebar"] > div {
+    padding-top: 1.1rem;
+}
+
+section[data-testid="stSidebar"] * {
+    color: #F4F8FB;
+}
+
+section[data-testid="stSidebar"] label {
+    color: #D8E6F2 !important;
+    font-weight: 650 !important;
+}
+
+section[data-testid="stSidebar"] div[data-baseweb="select"] > div {
+    background: rgba(255,255,255,0.10) !important;
+    border-color: rgba(255,255,255,0.20) !important;
+    color: #FFFFFF !important;
+}
+
+.sidebar-brand {
+    padding: 18px 16px;
+    margin-bottom: 14px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.09);
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: 0 8px 22px rgba(0,0,0,0.14);
+}
+
+.sidebar-brand-title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #FFFFFF;
+    letter-spacing: 0.01em;
+}
+
+.sidebar-brand-subtitle {
+    margin-top: 5px;
+    font-size: 0.80rem;
+    color: rgba(255,255,255,0.72);
+    line-height: 1.45;
+}
+
+.sidebar-section-label {
+    margin-top: 18px;
+    margin-bottom: 8px;
+    color: rgba(255,255,255,0.62);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+}
+
+.sidebar-nav-link {
+    display: block;
+    padding: 10px 12px;
+    margin: 5px 0;
+    border-radius: 9px;
+    color: #EAF3FA !important;
+    text-decoration: none !important;
+    font-size: 0.90rem;
+    font-weight: 650;
+    background: rgba(255,255,255,0.055);
+    border: 1px solid rgba(255,255,255,0.08);
+    transition:
+        background 0.16s ease,
+        transform 0.16s ease,
+        border-color 0.16s ease;
+}
+
+.sidebar-nav-link:hover {
+    background: rgba(255,255,255,0.13);
+    border-color: rgba(255,255,255,0.20);
+    transform: translateX(2px);
+}
+
+.sidebar-status-card {
+    padding: 12px 13px;
+    margin-top: 8px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.10);
+}
+
+.sidebar-status-title {
+    font-size: 0.78rem;
+    font-weight: 750;
+    color: #FFFFFF;
+}
+
+.sidebar-status-value {
+    margin-top: 3px;
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.70);
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -104,6 +216,89 @@ except Exception:
     st.error("transfer_case_analysis.py could not be loaded.")
     st.code(traceback.format_exc())
     st.stop()
+
+
+
+
+# =============================================================================
+# SIDEBAR NAVIGATION
+# =============================================================================
+
+with st.sidebar:
+    st.markdown(
+        """
+<div class="sidebar-brand">
+    <div class="sidebar-brand-title">NVH Engineering Suite</div>
+    <div class="sidebar-brand-subtitle">
+        Order tracking, target evaluation and engineering reporting workspace
+    </div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        '<div class="sidebar-section-label">Workspace Navigation</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        """
+<a class="sidebar-nav-link" href="#vehicle-section">
+    01 · Vehicle Information
+</a>
+<a class="sidebar-nav-link" href="#measurement-section">
+    02 · Measurement Data
+</a>
+<a class="sidebar-nav-link" href="#configuration-section">
+    03 · Analysis Configuration
+</a>
+<a class="sidebar-nav-link" href="#readiness-section">
+    04 · Analysis Readiness
+</a>
+<a class="sidebar-nav-link" href="#results-section">
+    05 · Results Dashboard
+</a>
+<a class="sidebar-nav-link" href="#system-section">
+    06 · System Status
+</a>
+""",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        '<div class="sidebar-section-label">Module Status</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        """
+<div class="sidebar-status-card">
+    <div class="sidebar-status-title">Axle Whine Engine</div>
+    <div class="sidebar-status-value">Ready · 10th / 20th order</div>
+</div>
+<div class="sidebar-status-card">
+    <div class="sidebar-status-title">Transfer Case Engine</div>
+    <div class="sidebar-status-value">Ready · 63 / 85.05 orders</div>
+</div>
+<div class="sidebar-status-card">
+    <div class="sidebar-status-title">Reporting</div>
+    <div class="sidebar-status-value">Excel export enabled</div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        '<div class="sidebar-section-label">Quick Guidance</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.caption(
+        "Complete the workflow from top to bottom. "
+        "The Run Analysis button becomes active after all mandatory "
+        "inputs are available."
+    )
 
 
 # =============================================================================
@@ -1436,6 +1631,8 @@ for column, (number, name) in zip(
         )
 
 
+st.markdown('<div id="vehicle-section"></div>', unsafe_allow_html=True)
+
 with st.container(border=True):
     section_title(
         "Vehicle Information",
@@ -1511,6 +1708,8 @@ with st.container(border=True):
     elif vin_valid:
         st.success("Vehicle identification completed.")
 
+
+st.markdown('<div id="measurement-section"></div>', unsafe_allow_html=True)
 
 with st.container(border=True):
     section_title(
@@ -1596,6 +1795,8 @@ else:
     default_max_order = 200
 
 
+st.markdown('<div id="configuration-section"></div>', unsafe_allow_html=True)
+
 with st.container(border=True):
     section_title(
         "Analysis Configuration",
@@ -1668,6 +1869,8 @@ can_continue = (
     and uploaded_file is not None
 )
 
+
+st.markdown('<div id="readiness-section"></div>', unsafe_allow_html=True)
 
 with st.container(border=True):
     section_title(
@@ -2952,6 +3155,8 @@ def display_order_result(
         )
 
 
+st.markdown('<div id="results-section"></div>', unsafe_allow_html=True)
+
 if st.session_state.get("analysis_completed", False):
     st.divider()
 
@@ -3142,6 +3347,8 @@ if st.session_state.get("analysis_completed", False):
                     hide_index=True,
                 )
 
+
+st.markdown('<div id="system-section"></div>', unsafe_allow_html=True)
 
 # =============================================================================
 # SYSTEM STATUS
