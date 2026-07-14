@@ -5,6 +5,7 @@ import traceback
 from io import BytesIO
 from typing import Dict, Mapping, Optional, Tuple
 
+import altair as alt
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -2107,6 +2108,294 @@ def render_analysis_dashboard(
             )
 
 
+def render_interactive_order_chart(
+    order_label: str,
+    channel_curves: Mapping[str, dict],
+    target_rpm: Optional[np.ndarray],
+    target_amp: Optional[np.ndarray],
+    vin: str,
+    analysis_type: str,
+    vehicle_configuration: str,
+) -> None:
+    """
+    Render an interactive order-response chart with hover inspection,
+    zooming and panning.
+
+    Altair is installed with Streamlit, so this feature does not require
+    an additional package in requirements.txt.
+    """
+    chart_frames = []
+
+    for channel_name, curve in channel_curves.items():
+        rpm_values = np.asarray(
+            curve["rpm"],
+            dtype=float,
+        )
+
+        amplitude_values = np.asarray(
+            curve["amp"],
+            dtype=float,
+        )
+
+        valid_mask = (
+            np.isfinite(rpm_values)
+            & np.isfinite(amplitude_values)
+        )
+
+        if not np.any(valid_mask):
+            continue
+
+        chart_frames.append(
+            pd.DataFrame(
+                {
+                    "RPM": rpm_values[valid_mask],
+                    "Amplitude": amplitude_values[valid_mask],
+                    "Series": channel_name,
+                    "Series Type": "Measured",
+                }
+            )
+        )
+
+    if (
+        target_rpm is not None
+        and target_amp is not None
+    ):
+        target_rpm_values = np.asarray(
+            target_rpm,
+            dtype=float,
+        )
+
+        target_amp_values = np.asarray(
+            target_amp,
+            dtype=float,
+        )
+
+        target_valid_mask = (
+            np.isfinite(target_rpm_values)
+            & np.isfinite(target_amp_values)
+        )
+
+        if np.any(target_valid_mask):
+            chart_frames.append(
+                pd.DataFrame(
+                    {
+                        "RPM": target_rpm_values[
+                            target_valid_mask
+                        ],
+                        "Amplitude": target_amp_values[
+                            target_valid_mask
+                        ],
+                        "Series": "Target",
+                        "Series Type": "Target",
+                    }
+                )
+            )
+
+    if not chart_frames:
+        st.warning(
+            "No valid curve data are available for the interactive chart."
+        )
+        return
+
+    chart_data = pd.concat(
+        chart_frames,
+        ignore_index=True,
+    )
+
+    channel_domain = [
+        "ChA",
+        "ChB",
+        "ChC",
+        "Target",
+    ]
+
+    channel_range = [
+        "#1768A6",
+        "#E67E22",
+        "#2E8B57",
+        "#C0392B",
+    ]
+
+    nearest = alt.selection_point(
+        nearest=True,
+        on="pointerover",
+        fields=["RPM"],
+        empty=False,
+        clear="pointerout",
+    )
+
+    base = alt.Chart(
+        chart_data
+    ).encode(
+        x=alt.X(
+            "RPM:Q",
+            title="Engine Speed [rpm]",
+            axis=alt.Axis(
+                grid=True,
+                gridColor="#DCE4EA",
+                labelColor="#536979",
+                titleColor="#30485C",
+                tickColor="#AEBCC7",
+                domainColor="#AEBCC7",
+            ),
+        ),
+        y=alt.Y(
+            "Amplitude:Q",
+            title="Order Amplitude [m/s²]",
+            scale=alt.Scale(
+                zero=True,
+                nice=True,
+            ),
+            axis=alt.Axis(
+                grid=True,
+                gridColor="#DCE4EA",
+                labelColor="#536979",
+                titleColor="#30485C",
+                tickColor="#AEBCC7",
+                domainColor="#AEBCC7",
+            ),
+        ),
+        color=alt.Color(
+            "Series:N",
+            title=None,
+            scale=alt.Scale(
+                domain=channel_domain,
+                range=channel_range,
+            ),
+            legend=alt.Legend(
+                orient="top",
+                direction="horizontal",
+                title=None,
+                labelColor="#30485C",
+            ),
+        ),
+        strokeDash=alt.StrokeDash(
+            "Series Type:N",
+            title=None,
+            scale=alt.Scale(
+                domain=[
+                    "Measured",
+                    "Target",
+                ],
+                range=[
+                    [1, 0],
+                    [8, 5],
+                ],
+            ),
+            legend=None,
+        ),
+    )
+
+    lines = base.mark_line(
+        strokeWidth=2.4,
+        interpolate="linear",
+    )
+
+    selectors = alt.Chart(
+        chart_data
+    ).mark_point(
+        opacity=0,
+    ).encode(
+        x="RPM:Q",
+    ).add_params(
+        nearest
+    )
+
+    hover_points = base.mark_circle(
+        size=72,
+        stroke="#FFFFFF",
+        strokeWidth=1.4,
+    ).encode(
+        opacity=alt.condition(
+            nearest,
+            alt.value(1),
+            alt.value(0),
+        ),
+        tooltip=[
+            alt.Tooltip(
+                "Series:N",
+                title="Series",
+            ),
+            alt.Tooltip(
+                "RPM:Q",
+                title="RPM",
+                format=".0f",
+            ),
+            alt.Tooltip(
+                "Amplitude:Q",
+                title="Amplitude [m/s²]",
+                format=".3f",
+            ),
+        ],
+    )
+
+    rule = alt.Chart(
+        chart_data
+    ).mark_rule(
+        color="#607585",
+        strokeDash=[3, 3],
+    ).encode(
+        x="RPM:Q",
+        opacity=alt.condition(
+            nearest,
+            alt.value(0.55),
+            alt.value(0),
+        ),
+    ).transform_filter(
+        nearest
+    )
+
+    chart = (
+        alt.layer(
+            lines,
+            selectors,
+            hover_points,
+            rule,
+        )
+        .properties(
+            height=520,
+            title=alt.TitleParams(
+                text=f"{order_label} — Interactive Order Response",
+                subtitle=[
+                    f"VIN: {vin}",
+                    f"{analysis_type} | {vehicle_configuration}",
+                    "Hover to inspect values. Scroll to zoom and drag to pan.",
+                ],
+                anchor="start",
+                color="#17324D",
+                fontSize=17,
+                fontWeight=700,
+                subtitleColor="#6A7D8C",
+                subtitleFontSize=11,
+                offset=16,
+            ),
+        )
+        .configure_view(
+            stroke="#DCE4EA",
+            fill="#FFFFFF",
+            cornerRadius=8,
+        )
+        .configure_axis(
+            labelFontSize=11,
+            titleFontSize=12,
+            titleFontWeight=600,
+        )
+        .configure_legend(
+            labelFontSize=11,
+            symbolStrokeWidth=3,
+        )
+        .interactive(
+            bind_y=False,
+        )
+    )
+
+    st.altair_chart(
+        chart,
+        width="stretch",
+        theme=None,
+    )
+
+
 def display_order_result(
     order_value: float,
     definition: Mapping[str, object],
@@ -2142,7 +2431,7 @@ def display_order_result(
 
     metric_columns[3].metric("Assessment", status)
 
-    figure = plot_order_comparison(
+    render_interactive_order_chart(
         order_label=definition["label"],
         channel_curves=channel_curves,
         target_rpm=definition.get("target_rpm"),
@@ -2151,8 +2440,33 @@ def display_order_result(
         analysis_type=result_analysis_type,
         vehicle_configuration=result_vehicle_configuration,
     )
-    st.pyplot(figure, width="stretch")
-    plt.close(figure)
+
+    with st.expander(
+        "Static Engineering Plot",
+        expanded=False,
+    ):
+        st.caption(
+            "Static Matplotlib view used for report-style inspection."
+        )
+
+        figure = plot_order_comparison(
+            order_label=definition["label"],
+            channel_curves=channel_curves,
+            target_rpm=definition.get("target_rpm"),
+            target_amp=definition.get("target_amp"),
+            vin=result_vin,
+            analysis_type=result_analysis_type,
+            vehicle_configuration=result_vehicle_configuration,
+        )
+
+        st.pyplot(
+            figure,
+            width="stretch",
+        )
+
+        plt.close(
+            figure
+        )
 
     st.dataframe(
         result_dataframe,
