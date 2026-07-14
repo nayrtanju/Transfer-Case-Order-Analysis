@@ -101,47 +101,6 @@ with st.sidebar:
 
 T = LANGUAGES[language_name]
 
-if theme_mode == "Engineering Dark":
-    st.markdown(
-        """
-<style>
-.stApp {background:#111827;color:#F3F4F6;}
-div[data-testid="stVerticalBlockBorderWrapper"]{
-background:#1F2937!important;border:1px solid #374151!important;
-}
-.section-title{color:#F3F4F6!important;border-left-color:#3B82F6!important;}
-.section-subtitle{color:#B8C5D1!important;}
-div[data-testid="metric-container"]{
-background:#1F2937!important;border:1px solid #374151!important;
-}
-div[data-testid="metric-container"] label,
-div[data-testid="metric-container"] [data-testid="stMetricValue"]{
-color:#F3F4F6!important;
-}
-.info-panel{background:#172033!important;border-color:#374151!important;}
-.info-panel-title,.info-panel-body{color:#E5E7EB!important;}
-
-.startup-panel{background:linear-gradient(135deg,#FFF 0%,#F4F8FC 100%);
-border:1px solid #DCE4EA;border-radius:14px;padding:16px 18px;
-margin-bottom:14px;box-shadow:0 5px 14px rgba(17,45,72,.06);}
-.startup-title{color:#17324D;font-size:1rem;font-weight:800;}
-.startup-text{color:#657887;font-size:.86rem;margin-top:4px;}
-.progress-step{border-radius:10px;padding:10px 12px;margin:4px 0;
-border:1px solid #DCE4EA;background:#FFF;}
-.progress-step-complete{border-left:5px solid #2E8B57;}
-.progress-step-active{border-left:5px solid #1768A6;}
-.progress-step-pending{border-left:5px solid #AEBCC7;opacity:.76;}
-.result-summary-card{border:1px solid #DCE4EA;border-radius:13px;padding:15px;
-background:linear-gradient(135deg,#FFF 0%,#F8FAFC 100%);
-box-shadow:0 4px 14px rgba(17,45,72,.05);min-height:132px;}
-.result-card-title{color:#17324D;font-weight:800;font-size:.92rem;}
-.result-card-value{color:#17324D;font-weight:800;font-size:1.35rem;margin-top:8px;}
-.result-card-caption{color:#647787;font-size:.78rem;margin-top:5px;}
-
-</style>
-""",
-        unsafe_allow_html=True,
-    )
 
 
 
@@ -205,11 +164,29 @@ with top_bar:
     with c1:
         st.markdown("## 🔧 NVH Engineering Suite")
     with c2:
-        st.button("🏠 Home", use_container_width=True, disabled=True)
+        st.button(
+            "🏠 Home",
+            width="stretch",
+            disabled=True,
+            key="command_home",
+        )
     with c3:
-        st.button("📄 Report", use_container_width=True, disabled=not st.session_state.get("analysis_completed", False))
+        st.button(
+            "📄 Report",
+            width="stretch",
+            disabled=not st.session_state.get(
+                "analysis_completed",
+                False,
+            ),
+            key="command_report",
+        )
     with c4:
-        st.button("⬇ Export", use_container_width=True, disabled="excel_report" not in st.session_state)
+        st.button(
+            "⬇ Export",
+            width="stretch",
+            disabled="excel_report" not in st.session_state,
+            key="command_export",
+        )
 
 if show_startup_panel:
     st.markdown(
@@ -524,6 +501,49 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
+
+
+if theme_mode == "Engineering Dark":
+    st.markdown(
+        """
+<style>
+.stApp {background:#111827;color:#F3F4F6;}
+div[data-testid="stVerticalBlockBorderWrapper"]{
+background:#1F2937!important;border:1px solid #374151!important;
+}
+.section-title{color:#F3F4F6!important;border-left-color:#3B82F6!important;}
+.section-subtitle{color:#B8C5D1!important;}
+div[data-testid="metric-container"]{
+background:#1F2937!important;border:1px solid #374151!important;
+}
+div[data-testid="metric-container"] label,
+div[data-testid="metric-container"] [data-testid="stMetricValue"]{
+color:#F3F4F6!important;
+}
+.info-panel{background:#172033!important;border-color:#374151!important;}
+.info-panel-title,.info-panel-body{color:#E5E7EB!important;}
+
+.startup-panel{background:linear-gradient(135deg,#FFF 0%,#F4F8FC 100%);
+border:1px solid #DCE4EA;border-radius:14px;padding:16px 18px;
+margin-bottom:14px;box-shadow:0 5px 14px rgba(17,45,72,.06);}
+.startup-title{color:#17324D;font-size:1rem;font-weight:800;}
+.startup-text{color:#657887;font-size:.86rem;margin-top:4px;}
+.progress-step{border-radius:10px;padding:10px 12px;margin:4px 0;
+border:1px solid #DCE4EA;background:#FFF;}
+.progress-step-complete{border-left:5px solid #2E8B57;}
+.progress-step-active{border-left:5px solid #1768A6;}
+.progress-step-pending{border-left:5px solid #AEBCC7;opacity:.76;}
+.result-summary-card{border:1px solid #DCE4EA;border-radius:13px;padding:15px;
+background:linear-gradient(135deg,#FFF 0%,#F8FAFC 100%);
+box-shadow:0 4px 14px rgba(17,45,72,.05);min-height:132px;}
+.result-card-title{color:#17324D;font-weight:800;font-size:.92rem;}
+.result-card-value{color:#17324D;font-weight:800;font-size:1.35rem;margin-top:8px;}
+.result-card-caption{color:#647787;font-size:.78rem;margin-top:5px;}
+
+</style>
+""",
+        unsafe_allow_html=True,
+    )
 
 
 # =============================================================================
@@ -1105,7 +1125,7 @@ def plot_order_comparison(
     axis.set_xlabel(
         "Engine Speed [rpm]",
         fontsize=11,
-        fontweight="semibold",
+        fontweight="bold",
         color="#30485C",
         labelpad=10,
     )
@@ -1113,7 +1133,7 @@ def plot_order_comparison(
     axis.set_ylabel(
         "Order Amplitude [m/s²]",
         fontsize=11,
-        fontweight="semibold",
+        fontweight="bold",
         color="#30485C",
         labelpad=10,
     )
@@ -1342,7 +1362,7 @@ def create_order_map_figure(
     colorbar.set_label(
         "Amplitude [dB re 1 m/s²]",
         fontsize=10,
-        fontweight="semibold",
+        fontweight="bold",
         color="#30485C",
         labelpad=10,
     )
@@ -1355,7 +1375,7 @@ def create_order_map_figure(
     axis.set_xlabel(
         "Order",
         fontsize=11,
-        fontweight="semibold",
+        fontweight="bold",
         color="#30485C",
         labelpad=10,
     )
@@ -1363,7 +1383,7 @@ def create_order_map_figure(
     axis.set_ylabel(
         "Engine Speed [rpm]",
         fontsize=11,
-        fontweight="semibold",
+        fontweight="bold",
         color="#30485C",
         labelpad=10,
     )
@@ -1606,6 +1626,111 @@ def make_excel_report(
 
     output.seek(0)
     return output
+
+
+# =============================================================================
+# PDF REPORT GENERATION
+# =============================================================================
+
+def make_pdf_report(
+    vehicle_information: dict,
+    results_by_order: Mapping[float, pd.DataFrame],
+) -> Optional[BytesIO]:
+    if not REPORTLAB_AVAILABLE:
+        return None
+
+    output = BytesIO()
+    document = SimpleDocTemplate(
+        output,
+        pagesize=landscape(A4),
+        rightMargin=14 * mm,
+        leftMargin=14 * mm,
+        topMargin=12 * mm,
+        bottomMargin=12 * mm,
+        title="NVH Engineering Analysis Report",
+        author="NVH Engineering Suite",
+    )
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "CorporateTitle",
+        parent=styles["Title"],
+        alignment=TA_CENTER,
+        textColor=colors.HexColor("#17324D"),
+        fontSize=20,
+        leading=24,
+        spaceAfter=10,
+    )
+    heading_style = ParagraphStyle(
+        "CorporateHeading",
+        parent=styles["Heading2"],
+        textColor=colors.HexColor("#1768A6"),
+        fontSize=13,
+        leading=16,
+        spaceBefore=8,
+        spaceAfter=6,
+    )
+
+    story = [
+        Paragraph("NVH Engineering Analysis Report", title_style),
+        Paragraph(
+            f"VIN: {vehicle_information.get('VIN', 'N/A')} | "
+            f"{vehicle_information.get('Analysis Type', 'N/A')} | "
+            f"{vehicle_information.get('Vehicle Configuration', 'N/A')}",
+            styles["Normal"],
+        ),
+        Spacer(1, 8),
+        Paragraph("Executive Summary", heading_style),
+    ]
+
+    summary_data = [["Field", "Value"]]
+    for key in [
+        "VIN","Analysis Type","Fuel Type","Vehicle Configuration",
+        "Target Orders","Order Width","RPM Step","Samples per Rev",
+        "Revs per Block","Overlap","Max Order","Overall Assessment",
+    ]:
+        summary_data.append([key, str(vehicle_information.get(key, "N/A"))])
+
+    summary_table = Table(summary_data, colWidths=[55 * mm, 190 * mm], repeatRows=1)
+    summary_table.setStyle(TableStyle([
+        ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#17324D")),
+        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+        ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+        ("GRID",(0,0),(-1,-1),0.5,colors.HexColor("#CBD7DF")),
+        ("ROWBACKGROUNDS",(0,1),(-1,-1),[colors.white,colors.HexColor("#F3F6F9")]),
+        ("FONTSIZE",(0,0),(-1,-1),8.5),
+        ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+    ]))
+    story.extend([summary_table, PageBreak()])
+
+    for order_value, dataframe in results_by_order.items():
+        story.append(Paragraph(f"{order_value:.2f} Order Results", heading_style))
+        cols = [c for c in [
+            "Order Label","Harmonic","Channel","Peak RPM",
+            "Peak Amplitude [m/s²]","Target at Peak RPM [m/s²]",
+            "Max Margin [m/s²]","Max Margin [%]",
+            "Exceedance Area [m/s²·RPM]","Status",
+        ] if c in dataframe.columns]
+        data = [cols]
+        for _, row in dataframe[cols].iterrows():
+            data.append([
+                f"{v:.3f}" if isinstance(v,(float,np.floating)) and np.isfinite(v) else str(v)
+                for v in row.tolist()
+            ])
+        table = Table(data, repeatRows=1, hAlign="LEFT")
+        table.setStyle(TableStyle([
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#1768A6")),
+            ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+            ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+            ("GRID",(0,0),(-1,-1),0.4,colors.HexColor("#CBD7DF")),
+            ("ROWBACKGROUNDS",(0,1),(-1,-1),[colors.white,colors.HexColor("#F3F6F9")]),
+            ("FONTSIZE",(0,0),(-1,-1),7.2),
+        ]))
+        story.extend([table, Spacer(1, 10)])
+
+    document.build(story)
+    output.seek(0)
+    return output
+
 
 
 # =============================================================================
@@ -2104,10 +2229,13 @@ if st.button(
             order_definitions,
         )
 
-        pdf_report = make_pdf_report(
-            vehicle_information=vehicle_information,
-            results_by_order=results_by_order,
-        )
+        try:
+            pdf_report = make_pdf_report(
+                vehicle_information=vehicle_information,
+                results_by_order=results_by_order,
+            )
+        except Exception:
+            pdf_report = None
 
         st.session_state.update(
             {
@@ -2144,110 +2272,6 @@ if st.button(
         st.session_state["analysis_completed"] = False
         st.error("An error occurred while running the analysis.")
         st.exception(error)
-
-
-# =============================================================================
-# PDF REPORT GENERATION
-# =============================================================================
-
-def make_pdf_report(
-    vehicle_information: dict,
-    results_by_order: Mapping[float, pd.DataFrame],
-) -> Optional[BytesIO]:
-    if not REPORTLAB_AVAILABLE:
-        return None
-
-    output = BytesIO()
-    document = SimpleDocTemplate(
-        output,
-        pagesize=landscape(A4),
-        rightMargin=14 * mm,
-        leftMargin=14 * mm,
-        topMargin=12 * mm,
-        bottomMargin=12 * mm,
-        title="NVH Engineering Analysis Report",
-        author="NVH Engineering Suite",
-    )
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle(
-        "CorporateTitle",
-        parent=styles["Title"],
-        alignment=TA_CENTER,
-        textColor=colors.HexColor("#17324D"),
-        fontSize=20,
-        leading=24,
-        spaceAfter=10,
-    )
-    heading_style = ParagraphStyle(
-        "CorporateHeading",
-        parent=styles["Heading2"],
-        textColor=colors.HexColor("#1768A6"),
-        fontSize=13,
-        leading=16,
-        spaceBefore=8,
-        spaceAfter=6,
-    )
-
-    story = [
-        Paragraph("NVH Engineering Analysis Report", title_style),
-        Paragraph(
-            f"VIN: {vehicle_information.get('VIN', 'N/A')} | "
-            f"{vehicle_information.get('Analysis Type', 'N/A')} | "
-            f"{vehicle_information.get('Vehicle Configuration', 'N/A')}",
-            styles["Normal"],
-        ),
-        Spacer(1, 8),
-        Paragraph("Executive Summary", heading_style),
-    ]
-
-    summary_data = [["Field", "Value"]]
-    for key in [
-        "VIN","Analysis Type","Fuel Type","Vehicle Configuration",
-        "Target Orders","Order Width","RPM Step","Samples per Rev",
-        "Revs per Block","Overlap","Max Order","Overall Assessment",
-    ]:
-        summary_data.append([key, str(vehicle_information.get(key, "N/A"))])
-
-    summary_table = Table(summary_data, colWidths=[55 * mm, 190 * mm], repeatRows=1)
-    summary_table.setStyle(TableStyle([
-        ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#17324D")),
-        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
-        ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
-        ("GRID",(0,0),(-1,-1),0.5,colors.HexColor("#CBD7DF")),
-        ("ROWBACKGROUNDS",(0,1),(-1,-1),[colors.white,colors.HexColor("#F3F6F9")]),
-        ("FONTSIZE",(0,0),(-1,-1),8.5),
-        ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
-    ]))
-    story.extend([summary_table, PageBreak()])
-
-    for order_value, dataframe in results_by_order.items():
-        story.append(Paragraph(f"{order_value:.2f} Order Results", heading_style))
-        cols = [c for c in [
-            "Order Label","Harmonic","Channel","Peak RPM",
-            "Peak Amplitude [m/s²]","Target at Peak RPM [m/s²]",
-            "Max Margin [m/s²]","Max Margin [%]",
-            "Exceedance Area [m/s²·RPM]","Status",
-        ] if c in dataframe.columns]
-        data = [cols]
-        for _, row in dataframe[cols].iterrows():
-            data.append([
-                f"{v:.3f}" if isinstance(v,(float,np.floating)) and np.isfinite(v) else str(v)
-                for v in row.tolist()
-            ])
-        table = Table(data, repeatRows=1, hAlign="LEFT")
-        table.setStyle(TableStyle([
-            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#1768A6")),
-            ("TEXTCOLOR",(0,0),(-1,0),colors.white),
-            ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
-            ("GRID",(0,0),(-1,-1),0.4,colors.HexColor("#CBD7DF")),
-            ("ROWBACKGROUNDS",(0,1),(-1,-1),[colors.white,colors.HexColor("#F3F6F9")]),
-            ("FONTSIZE",(0,0),(-1,-1),7.2),
-        ]))
-        story.extend([table, Spacer(1, 10)])
-
-    document.build(story)
-    output.seek(0)
-    return output
 
 
 # =============================================================================
@@ -3524,50 +3548,54 @@ if st.session_state.get("analysis_completed", False):
                 ],
             )
 
-            with st.expander(
-                "Static Engineering Waterfall",
-                expanded=not interactive_map_rendered,
+            if (
+                show_static_plots
+                or not interactive_map_rendered
             ):
-                if not interactive_map_rendered:
-                    st.warning(
-                        "Plotly is not installed. Displaying the static "
-                        "Matplotlib waterfall."
+                with st.expander(
+                    "Static Engineering Waterfall",
+                    expanded=not interactive_map_rendered,
+                ):
+                    if not interactive_map_rendered:
+                        st.warning(
+                            "Plotly is not installed. Displaying the static "
+                            "Matplotlib waterfall."
+                        )
+
+                    map_figure = create_order_map_figure(
+                        time=result_time,
+                        rpm=result_rpm,
+                        signal=result_channels[
+                            result_channel
+                        ],
+                        selected_channel=result_channel,
+                        analysis_type=result_analysis_type,
+                        vin=result_vin,
+                        samples_per_rev=result_settings[
+                            "samples_per_rev"
+                        ],
+                        revs_per_block=result_settings[
+                            "revs_per_block"
+                        ],
+                        overlap=result_settings[
+                            "overlap"
+                        ],
+                        max_order=result_settings[
+                            "max_order"
+                        ],
+                        calibration_factor=result_settings[
+                            "calibration_factor"
+                        ],
                     )
 
-                map_figure = create_order_map_figure(
-                    time=result_time,
-                    rpm=result_rpm,
-                    signal=result_channels[
-                        result_channel
-                    ],
-                    selected_channel=result_channel,
-                    analysis_type=result_analysis_type,
-                    vin=result_vin,
-                    samples_per_rev=result_settings[
-                        "samples_per_rev"
-                    ],
-                    revs_per_block=result_settings[
-                        "revs_per_block"
-                    ],
-                    overlap=result_settings[
-                        "overlap"
-                    ],
-                    max_order=result_settings[
-                        "max_order"
-                    ],
-                    calibration_factor=result_settings[
-                        "calibration_factor"
-                    ],
-                )
+                    st.pyplot(
+                        map_figure,
+                        width="stretch",
+                    )
 
-                st.pyplot(
-                    map_figure,
-                    width="stretch",
-                )
-
-                plt.close(
-                    map_figure
-                )
+                    plt.close(
+                        map_figure
+                    )
 
     with raw_tab:
         for order_value, curve_dataframe in result_raw_curves.items():
