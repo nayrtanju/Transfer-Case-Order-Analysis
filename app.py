@@ -169,6 +169,15 @@ section[data-testid="stSidebar"] div[data-baseweb="select"] > div {
     color: rgba(255,255,255,0.70);
 }
 
+
+.top-toolbar{
+background:#fff;
+border:1px solid #DCE4EA;
+border-radius:12px;
+padding:10px;
+margin-bottom:12px;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -223,6 +232,22 @@ except Exception:
 # =============================================================================
 # SIDEBAR NAVIGATION
 # =============================================================================
+
+
+# =============================================================================
+# GLOBAL COMMAND BAR
+# =============================================================================
+top_bar = st.container()
+with top_bar:
+    c1, c2, c3, c4 = st.columns([2.5,1,1,1])
+    with c1:
+        st.markdown("## 🔧 NVH Engineering Suite")
+    with c2:
+        st.button("🏠 Home", use_container_width=True, disabled=True)
+    with c3:
+        st.button("📄 Report", use_container_width=True, disabled=not st.session_state.get("analysis_completed", False))
+    with c4:
+        st.button("⬇ Export", use_container_width=True, disabled="excel_report" not in st.session_state)
 
 with st.sidebar:
     st.markdown(
