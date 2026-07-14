@@ -1512,7 +1512,307 @@ def determine_order_status(result_dataframe: pd.DataFrame) -> str:
     if (evaluated["Status"] == "PASS").all():
         return "PASS"
     return "FAIL"
+def render_analysis_dashboard(
+    result_tables: Mapping[float, pd.DataFrame],
+    overall_status: str,
+    vin: str,
+    analysis_type: str,
+    vehicle_configuration: str,
+) -> None:
+    """
+    Render the executive KPI dashboard for completed analyses.
 
+    Dashboard metrics:
+        - Overall status
+        - Worst order
+        - Worst channel
+        - Maximum peak amplitude
+        - Peak RPM
+        - Maximum target margin
+        - Evaluated orders
+        - Vehicle configuration
+    """
+    combined_frames = []
+
+    for order_value, result_dataframe in result_tables.items():
+        if result_dataframe is None or result_dataframe.empty:
+            continue
+
+        frame = result_dataframe.copy()
+
+        if "Order" not in frame.columns:
+            frame["Order"] = float(order_value)
+
+        combined_frames.append(
+            frame
+        )
+
+    if not combined_frames:
+        st.warning(
+            "No result data are available for the executive dashboard."
+        )
+        return
+
+    combined_results = pd.concat(
+        combined_frames,
+        ignore_index=True,
+    )
+
+    # -------------------------------------------------------------------------
+    # Peak amplitude and corresponding channel / RPM
+    # -------------------------------------------------------------------------
+
+    peak_column = "Peak Amplitude [m/s²]"
+
+    if (
+        peak_column in combined_results.columns
+        and combined_results[peak_column].notna().any()
+    ):
+        peak_index = combined_results[
+            peak_column
+        ].astype(float).idxmax()
+
+        peak_row = combined_results.loc[
+            peak_index
+        ]
+
+        maximum_peak = float(
+            peak_row[
+                peak_column
+            ]
+        )
+
+        peak_rpm = float(
+            peak_row.get(
+                "Peak RPM",
+                np.nan,
+            )
+        )
+
+        worst_channel = str(
+            peak_row.get(
+                "Channel",
+                "N/A",
+            )
+        )
+
+        peak_order = float(
+            peak_row.get(
+                "Order",
+                np.nan,
+            )
+        )
+
+    else:
+        maximum_peak = np.nan
+        peak_rpm = np.nan
+        worst_channel = "N/A"
+        peak_order = np.nan
+
+    # -------------------------------------------------------------------------
+    # Worst order based on maximum target margin
+    # -------------------------------------------------------------------------
+
+    margin_column = "Max Margin [m/s²]"
+
+    evaluated_margin_rows = pd.DataFrame()
+
+    if margin_column in combined_results.columns:
+        evaluated_margin_rows = combined_results[
+            combined_results[
+                margin_column
+            ].notna()
+        ].copy()
+
+    if not evaluated_margin_rows.empty:
+        margin_index = evaluated_margin_rows[
+            margin_column
+        ].astype(float).idxmax()
+
+        margin_row = evaluated_margin_rows.loc[
+            margin_index
+        ]
+
+        worst_order = float(
+            margin_row.get(
+                "Order",
+                np.nan,
+            )
+        )
+
+        maximum_margin = float(
+            margin_row[
+                margin_column
+            ]
+        )
+
+    else:
+        # INFO-only harmonics do not have target margins.
+        # In that case, use the order containing the maximum measured peak.
+        worst_order = peak_order
+        maximum_margin = np.nan
+
+    # -------------------------------------------------------------------------
+    # Display formatting
+    # -------------------------------------------------------------------------
+
+    def format_order_value(
+        value: float
+    ) -> str:
+        if not np.isfinite(
+            value
+        ):
+            return "N/A"
+
+        if abs(
+            value
+            - round(
+                value
+            )
+        ) < 1e-9:
+            return f"{value:.0f}"
+
+        return f"{value:.2f}"
+
+    peak_display = (
+        f"{maximum_peak:.2f} m/s²"
+        if np.isfinite(
+            maximum_peak
+        )
+        else "N/A"
+    )
+
+    peak_rpm_display = (
+        f"{peak_rpm:.0f} rpm"
+        if np.isfinite(
+            peak_rpm
+        )
+        else "N/A"
+    )
+
+    margin_display = (
+        f"{maximum_margin:.2f} m/s²"
+        if np.isfinite(
+            maximum_margin
+        )
+        else "N/A"
+    )
+
+    evaluated_orders = ", ".join(
+        format_order_value(
+            float(
+                order_value
+            )
+        )
+        for order_value in sorted(
+            result_tables.keys()
+        )
+    )
+
+    analysis_display = (
+        "Axle Whine"
+        if analysis_type == ANALYSIS_AXLE
+        else "Transfer Case"
+    )
+
+    # -------------------------------------------------------------------------
+    # Dashboard
+    # -------------------------------------------------------------------------
+
+    with st.container(
+        border=True
+    ):
+        section_title(
+            "Executive Analysis Dashboard",
+            (
+                "Key order-analysis indicators and the most critical "
+                "measured condition."
+            ),
+        )
+
+        first_row = st.columns(
+            4
+        )
+
+        first_row[0].metric(
+            "Overall Status",
+            overall_status,
+        )
+
+        first_row[1].metric(
+            "Worst Order",
+            format_order_value(
+                worst_order
+            ),
+        )
+
+        first_row[2].metric(
+            "Worst Channel",
+            worst_channel,
+        )
+
+        first_row[3].metric(
+            "Maximum Peak",
+            peak_display,
+        )
+
+        second_row = st.columns(
+            4
+        )
+
+        second_row[0].metric(
+            "Peak RPM",
+            peak_rpm_display,
+        )
+
+        second_row[1].metric(
+            "Maximum Margin",
+            margin_display,
+        )
+
+        second_row[2].metric(
+            "Evaluated Orders",
+            evaluated_orders,
+        )
+
+        second_row[3].metric(
+            "Analysis Module",
+            analysis_display,
+        )
+
+        summary_row = st.columns(
+            2
+        )
+
+        summary_row[0].metric(
+            "VIN",
+            vin,
+        )
+
+        summary_row[1].metric(
+            "Vehicle Configuration",
+            vehicle_configuration,
+        )
+
+        if overall_status == "PASS":
+            st.success(
+                "Overall Assessment: PASS — "
+                "all evaluated channels remain within the defined targets."
+            )
+
+        elif overall_status == "FAIL":
+            st.error(
+                "Overall Assessment: FAIL — "
+                f"the most critical condition is "
+                f"{format_order_value(worst_order)} order on "
+                f"{worst_channel}."
+            )
+
+        else:
+            st.info(
+                "Overall Assessment: INFO — "
+                "the displayed harmonics do not contain a defined target."
+            )
 
 def display_order_result(
     order_value: float,
@@ -1597,38 +1897,27 @@ if st.session_state.get("analysis_completed", False):
     result_settings = st.session_state["analysis_settings_result"]
     result_vin = st.session_state["vin_result"]
 
-    with st.container(border=True):
+        render_analysis_dashboard(
+        result_tables=result_tables,
+        overall_status=result_status,
+        vin=result_vin,
+        analysis_type=result_analysis_type,
+        vehicle_configuration=result_configuration,
+    )
+
+    with st.container(
+        border=True
+    ):
         section_title(
-            "Overall Assessment",
-            "Executive summary of the completed order analysis.",
+            "Analysis Report",
+            "Download the complete calculation and compliance report.",
         )
-
-        summary_columns = st.columns(4)
-        summary_columns[0].metric("Overall Status", result_status)
-        summary_columns[1].metric("VIN", result_vin)
-        summary_columns[2].metric(
-            "Analysis",
-            (
-                "Axle Whine"
-                if result_analysis_type == ANALYSIS_AXLE
-                else "Transfer Case"
-            ),
-        )
-        summary_columns[3].metric(
-            "Configuration",
-            result_configuration,
-        )
-
-        if result_status == "PASS":
-            st.success("Overall Assessment: PASS")
-        elif result_status == "FAIL":
-            st.error("Overall Assessment: FAIL")
-        else:
-            st.info("Overall Assessment: INFO")
 
         st.download_button(
             label="Download Excel Report",
-            data=st.session_state["excel_report"],
+            data=st.session_state[
+                "excel_report"
+            ],
             file_name=(
                 f"{result_vin}_"
                 f"{result_analysis_type.replace(' ', '_')}"
@@ -1641,7 +1930,6 @@ if st.session_state.get("analysis_completed", False):
             width="stretch",
             key="download_excel_report",
         )
-
     if result_analysis_type == ANALYSIS_TRANSFER_CASE:
         order_results_tab, order_map_tab, raw_tab = st.tabs(
             [
