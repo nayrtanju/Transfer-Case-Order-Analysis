@@ -1781,31 +1781,6 @@ def render_progress_wizard(
             )
 
 
-# =============================================================================
-# UI
-# =============================================================================
-
-workflow_columns = st.columns(4)
-for column, (number, name) in zip(
-    workflow_columns,
-    [
-        ("01", "Vehicle"),
-        ("02", "Measurement"),
-        ("03", "Configuration"),
-        ("04", "Results"),
-    ],
-):
-    with column:
-        st.markdown(
-            f"""
-<div class="workflow-card">
-    <div class="workflow-number">STEP {number}</div>
-    <div class="workflow-name">{name}</div>
-</div>
-""",
-            unsafe_allow_html=True,
-        )
-
 
 st.markdown('<div id="vehicle-section"></div>', unsafe_allow_html=True)
 
