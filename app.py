@@ -3612,7 +3612,7 @@ st.markdown(
 <div class="product-footer">
     <strong>Complete Vehicle Engineering Validation Environment</strong>
     &nbsp;·&nbsp; v2.3.1
-    &nbsp;·&nbsp; Son güncelleme: Temmuz 2026
+    &nbsp;·&nbsp; Last update:July 2026
 </div>
 """,
     unsafe_allow_html=True,
