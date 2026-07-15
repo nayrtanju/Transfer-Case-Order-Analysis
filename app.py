@@ -1733,55 +1733,6 @@ def make_pdf_report(
 
 
 
-# =============================================================================
-# UX WORKFLOW WIZARD
-# =============================================================================
-
-def render_progress_wizard(
-    vin_valid: bool,
-    uploaded_file,
-    configuration_selected: bool,
-    analysis_completed: bool,
-) -> None:
-    steps = [
-        ("Vehicle Information", vin_valid, "Validate the 17-character VIN."),
-        ("Measurement Import", uploaded_file is not None, "Upload measurement data."),
-        ("Signal Configuration", configuration_selected, "Confirm module settings."),
-        ("Order Tracking", analysis_completed, "Run order extraction."),
-        ("Target Evaluation", analysis_completed, "Evaluate target compliance."),
-        (
-            "Report Generation",
-            analysis_completed and "excel_report" in st.session_state,
-            "Generate Excel and PDF reports.",
-        ),
-    ]
-
-    with st.expander("Analysis Workflow", expanded=not analysis_completed):
-        for index, (label, completed, description) in enumerate(steps, start=1):
-            previous_complete = all(item[1] for item in steps[: index - 1])
-            if completed:
-                css_class = "progress-step progress-step-complete"
-                status_text = "✓ Complete"
-            elif previous_complete:
-                css_class = "progress-step progress-step-active"
-                status_text = "● Current"
-            else:
-                css_class = "progress-step progress-step-pending"
-                status_text = "○ Pending"
-
-            st.markdown(
-                f"""
-<div class="{css_class}">
-<strong>{index:02d} · {label}</strong>
-<span style="float:right">{status_text}</span>
-<div style="font-size:.80rem;color:#647787;margin-top:4px">{description}</div>
-</div>
-""",
-                unsafe_allow_html=True,
-            )
-
-
-
 st.markdown('<div id="vehicle-section"></div>', unsafe_allow_html=True)
 
 with st.container(border=True):
@@ -1957,13 +1908,6 @@ can_continue = (
     and uploaded_file is not None
 )
 
-
-render_progress_wizard(
-    vin_valid=vin_valid,
-    uploaded_file=uploaded_file,
-    configuration_selected=configuration_selected,
-    analysis_completed=st.session_state.get("analysis_completed", False),
-)
 
 st.markdown('<div id="readiness-section"></div>', unsafe_allow_html=True)
 
