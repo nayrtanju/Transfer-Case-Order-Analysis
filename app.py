@@ -544,6 +544,22 @@ div[data-testid="stDataFrame"] {
     }
 }
 
+
+.product-footer {
+    margin-top: 28px;
+    padding: 14px 4px 4px 4px;
+    border-top: 1px solid #dce4ea;
+    color: #7a8c9b;
+    font-size: 0.76rem;
+    text-align: center;
+    letter-spacing: 0.01em;
+}
+
+.product-footer strong {
+    color: #536979;
+    font-weight: 700;
+}
+
 </style>
 """,
     unsafe_allow_html=True,
@@ -604,6 +620,16 @@ box-shadow:0 4px 14px rgba(17,45,72,.05);min-height:132px;}
 
 .compact-output-value {
     color: #F3F4F6 !important;
+}
+
+
+.product-footer {
+    border-top-color: #374151 !important;
+    color: #94A3B8 !important;
+}
+
+.product-footer strong {
+    color: #E5E7EB !important;
 }
 
 </style>
@@ -1885,42 +1911,21 @@ with st.container(border=True):
         "Upload Time, ChA, ChB, ChC and RPM measurement data.",
     )
 
-    upload_column, structure_column = st.columns([1.7, 1.0])
-
-    with upload_column:
-        uploaded_file = st.file_uploader(
-            "Upload Measurement File",
-            type=["xlsx", "csv"],
-            disabled=not vin_valid,
-            key="measurement_file",
-            help=(
-                "Expected first five columns: "
-                "Time, ChA, ChB, ChC, RPM."
-            ),
-        )
-
-    with structure_column:
-        st.markdown(
-            """
-<div class="info-panel">
-    <div class="info-panel-title">Required Data Structure</div>
-    <div class="info-panel-body">
-        • Time [s]<br>
-        • ChA vibration<br>
-        • ChB vibration<br>
-        • ChC vibration<br>
-        • RPM
-    </div>
-</div>
-""",
-            unsafe_allow_html=True,
-        )
+    uploaded_file = st.file_uploader(
+        "Upload Measurement File",
+        type=["xlsx", "csv"],
+        disabled=not vin_valid,
+        key="measurement_file",
+        help=(
+            "Expected first five columns: "
+            "Time, ChA, ChB, ChC, RPM."
+        ),
+    )
 
     if uploaded_file is not None:
-        with upload_column:
-            st.success(
-                "✓ Measurement file loaded successfully."
-            )
+        st.success(
+            "✓ Measurement file loaded successfully."
+        )
 
 
 if analysis_type == ANALYSIS_AXLE:
@@ -3600,10 +3605,15 @@ st.markdown('<div id="system-section"></div>', unsafe_allow_html=True)
 with st.expander("System and Module Status", expanded=False):
     st.success("Axle Whine analysis engine: Ready")
     st.success("Transfer Case analysis engine: Ready")
-    st.write(
-        {
-            "Supported file types": ["XLSX", "CSV"],
-            "Supported channels": CHANNEL_NAMES,
-            "CSV unit conversion": "g → m/s²",
-        }
-    )
+
+
+st.markdown(
+    """
+<div class="product-footer">
+    <strong>Complete Vehicle Engineering Validation Environment</strong>
+    &nbsp;·&nbsp; v2.3.1
+    &nbsp;·&nbsp; Son güncelleme: Temmuz 2026
+</div>
+""",
+    unsafe_allow_html=True,
+)
