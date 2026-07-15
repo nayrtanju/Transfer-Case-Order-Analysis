@@ -1940,73 +1940,12 @@ else:
     default_max_order = 200
 
 
-st.markdown('<div id="configuration-section"></div>', unsafe_allow_html=True)
+# =============================================================================
+# ANALYSIS CONFIGURATION
+# (Hidden from user interface)
+# =============================================================================
 
-with st.container(border=True):
-    section_title(
-        "Analysis Configuration",
-        "Review the standard settings or open the advanced controls.",
-    )
-
-    settings_columns = st.columns(5)
-    settings_columns[0].metric(
-        "Samples / Rev",
-        fixed_samples_per_rev,
-    )
-    settings_columns[1].metric(
-        "Revs / Block",
-        fixed_revs_per_block,
-    )
-    settings_columns[2].metric(
-        "Overlap",
-        f"{fixed_overlap * 100:.0f}%",
-    )
-    settings_columns[3].metric(
-        "RPM Step",
-        f"{fixed_rpm_step:.0f}",
-    )
-    settings_columns[4].metric(
-        "Default Max Order",
-        default_max_order,
-    )
-
-    with st.expander("Advanced Analysis Settings", expanded=False):
-        setting_1, setting_2, setting_3 = st.columns(3)
-
-        with setting_1:
-            selected_channel = st.selectbox(
-                "Order Map Channel",
-                CHANNEL_NAMES,
-                key="order_map_channel",
-            )
-
-        with setting_2:
-            max_order = st.slider(
-                "Max Order",
-                min_value=minimum_max_order,
-                max_value=250,
-                value=default_max_order,
-                step=1,
-                key=f"max_order_{analysis_type}",
-            )
-
-        with setting_3:
-            order_width = st.number_input(
-                "Order Bandwidth",
-                min_value=0.05,
-                max_value=2.0,
-                value=0.15,
-                step=0.05,
-                format="%.2f",
-                key="order_width",
-            )
-
-    if analysis_type == ANALYSIS_TRANSFER_CASE:
-        st.info(
-            "Transfer Case analysis uses 20 revolutions per FFT block "
-            "and 0.05 order resolution."
-        )
-
+# Standard engineering settings are applied automatically.
 
 can_continue = (
     vin_valid
