@@ -1945,7 +1945,11 @@ else:
 # (Hidden from user interface)
 # =============================================================================
 
-# Standard engineering settings are applied automatically.
+# Keep the original default engineering parameters available to the
+# analysis engine while removing the configuration controls from the UI.
+selected_channel = "ChA"
+max_order = int(default_max_order)
+order_width = 0.15
 
 can_continue = (
     vin_valid
