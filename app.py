@@ -1043,7 +1043,7 @@ def plot_order_comparison(
     }
 
     figure, axis = plt.subplots(
-        figsize=(12.5, 7.2)
+        figsize=(13.8, 8.2)
     )
 
     figure.patch.set_facecolor(
@@ -1381,7 +1381,7 @@ def create_order_map_figure(
     )
 
     figure, axis = plt.subplots(
-        figsize=(12.5, 7.2)
+        figsize=(13.8, 8.2)
     )
 
     figure.patch.set_facecolor(
@@ -2389,9 +2389,9 @@ def render_analysis_dashboard(
             ),
         )
 
-        first_row = st.columns(4)
+        dashboard_row = st.columns(5)
 
-        first_row_values = [
+        dashboard_values = [
             (
                 "Overall Status",
                 overall_status,
@@ -2410,89 +2410,23 @@ def render_analysis_dashboard(
                 "Maximum Peak",
                 peak_display,
             ),
-        ]
-
-        for column, (
-            label,
-            value,
-        ) in zip(
-            first_row,
-            first_row_values,
-        ):
-            with column:
-                st.markdown(
-                    f"""
-<div class="compact-output-card">
-    <div class="compact-output-label">{label}</div>
-    <div class="compact-output-value">{value}</div>
-</div>
-""",
-                    unsafe_allow_html=True,
-                )
-
-        second_row = st.columns(4)
-
-        second_row_values = [
-            (
-                "Peak RPM",
-                peak_rpm_display,
-            ),
             (
                 "Maximum Margin",
                 margin_display,
             ),
-            (
-                "Evaluated Orders",
-                evaluated_orders,
-            ),
-            (
-                "Analysis Module",
-                analysis_display,
-            ),
         ]
 
         for column, (
             label,
             value,
         ) in zip(
-            second_row,
-            second_row_values,
+            dashboard_row,
+            dashboard_values,
         ):
             with column:
                 st.markdown(
                     f"""
 <div class="compact-output-card">
-    <div class="compact-output-label">{label}</div>
-    <div class="compact-output-value">{value}</div>
-</div>
-""",
-                    unsafe_allow_html=True,
-                )
-
-        summary_row = st.columns(2)
-
-        summary_values = [
-            (
-                "VIN",
-                vin,
-            ),
-            (
-                "Vehicle Configuration",
-                vehicle_configuration,
-            ),
-        ]
-
-        for column, (
-            label,
-            value,
-        ) in zip(
-            summary_row,
-            summary_values,
-        ):
-            with column:
-                st.markdown(
-                    f"""
-<div class="compact-output-card compact-output-card-wide">
     <div class="compact-output-label">{label}</div>
     <div class="compact-output-value">{value}</div>
 </div>
@@ -2743,7 +2677,7 @@ def render_interactive_order_chart(
                     "color": "#17324D",
                 },
             },
-            height=590,
+            height=690,
             margin={
                 "l": 70,
                 "r": 30,
@@ -2838,8 +2772,8 @@ def render_interactive_order_chart(
                     "filename": (
                         f"{vin}_{order_label.replace(' ', '_')}"
                     ),
-                    "height": 720,
-                    "width": 1280,
+                    "height": 900,
+                    "width": 1600,
                     "scale": 2,
                 },
                 "modeBarButtonsToRemove": [
@@ -2996,7 +2930,7 @@ def render_interactive_order_chart(
             points,
         )
         .properties(
-            height=520,
+            height=620,
             title=(
                 f"{order_label} — Interactive Order Response"
             ),
@@ -3162,7 +3096,7 @@ def render_interactive_order_map(
                 "color": "#17324D",
             },
         },
-        height=640,
+        height=720,
         margin={
             "l": 75,
             "r": 80,
@@ -3218,8 +3152,8 @@ def render_interactive_order_map(
                 "filename": (
                     f"{vin}_{selected_channel}_order_map"
                 ),
-                "height": 720,
-                "width": 1280,
+                "height": 900,
+                "width": 1600,
                 "scale": 2,
             },
             "modeBarButtonsToRemove": [
@@ -3255,66 +3189,117 @@ def display_order_result(
 
     section_title(f"{definition['label']} Result Summary")
 
-    metric_columns = st.columns(4)
-
-    for metric_column, channel_name in zip(
-        metric_columns[:3],
-        CHANNEL_NAMES,
-    ):
-        matching = result_dataframe.loc[
-            result_dataframe["Channel"] == channel_name,
-            "Peak Amplitude [m/s²]",
-        ]
-        value = (
-            f"{float(matching.iloc[0]):.2f} m/s²"
-            if len(matching)
-            else "N/A"
-        )
-        metric_column.metric(
-            f"Peak {channel_name}",
-            value,
-        )
-
-    metric_columns[3].metric("Assessment", status)
-
     peak_rows = result_dataframe[
-        result_dataframe["Peak Amplitude [m/s²]"].notna()
+        result_dataframe[
+            "Peak Amplitude [m/s²]"
+        ].notna()
     ]
 
     if not peak_rows.empty:
         critical_row = peak_rows.loc[
-            peak_rows["Peak Amplitude [m/s²]"].astype(float).idxmax()
-        ]
-        target_value = critical_row.get("Target at Peak RPM [m/s²]", np.nan)
-        margin_value = critical_row.get("Max Margin [m/s²]", np.nan)
-
-        card_columns = st.columns(4)
-        card_values = [
-            ("Critical Channel", str(critical_row.get("Channel","N/A")),
-             "Highest measured response"),
-            ("Peak Response",
-             f"{float(critical_row['Peak Amplitude [m/s²]']):.2f} m/s²",
-             f"at {float(critical_row.get('Peak RPM', np.nan)):.0f} rpm"),
-            ("Target at Peak",
-             f"{float(target_value):.2f} m/s²" if pd.notna(target_value) else "N/A",
-             "Reference target level"),
-            ("Maximum Margin",
-             f"{float(margin_value):+.2f} m/s²" if pd.notna(margin_value) else "N/A",
-             f"Assessment: {status}"),
+            peak_rows[
+                "Peak Amplitude [m/s²]"
+            ].astype(float).idxmax()
         ]
 
-        for column, (title, value, caption) in zip(card_columns, card_values):
+        peak_value = float(
+            critical_row[
+                "Peak Amplitude [m/s²]"
+            ]
+        )
+
+        peak_rpm_value = float(
+            critical_row.get(
+                "Peak RPM",
+                np.nan,
+            )
+        )
+
+        margin_value = critical_row.get(
+            "Max Margin [m/s²]",
+            np.nan,
+        )
+
+        target_value = critical_row.get(
+            "Target at Peak RPM [m/s²]",
+            np.nan,
+        )
+
+        compact_result_columns = st.columns(6)
+
+        compact_result_values = [
+            (
+                "Order",
+                str(
+                    definition.get(
+                        "label",
+                        order_value,
+                    )
+                ),
+            ),
+            (
+                "Status",
+                status,
+            ),
+            (
+                "Channel",
+                str(
+                    critical_row.get(
+                        "Channel",
+                        "N/A",
+                    )
+                ),
+            ),
+            (
+                "Peak",
+                f"{peak_value:.2f} m/s²",
+            ),
+            (
+                "Peak RPM",
+                (
+                    f"{peak_rpm_value:.0f} rpm"
+                    if np.isfinite(
+                        peak_rpm_value
+                    )
+                    else "N/A"
+                ),
+            ),
+            (
+                "Margin",
+                (
+                    f"{float(margin_value):+.2f} m/s²"
+                    if pd.notna(
+                        margin_value
+                    )
+                    else "N/A"
+                ),
+            ),
+        ]
+
+        for column, (
+            label,
+            value,
+        ) in zip(
+            compact_result_columns,
+            compact_result_values,
+        ):
             with column:
                 st.markdown(
                     f"""
-<div class="result-summary-card">
-<div class="result-card-title">{title}</div>
-<div class="result-card-value">{value}</div>
-<div class="result-card-caption">{caption}</div>
+<div class="compact-output-card">
+    <div class="compact-output-label">{label}</div>
+    <div class="compact-output-value">{value}</div>
 </div>
 """,
                     unsafe_allow_html=True,
                 )
+
+        if pd.notna(
+            target_value
+        ):
+            st.caption(
+                f"Target at peak: {float(target_value):.2f} m/s²"
+            )
 
     render_interactive_order_chart(
         order_label=definition["label"],
