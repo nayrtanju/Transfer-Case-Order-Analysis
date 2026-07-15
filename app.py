@@ -484,6 +484,46 @@ div[data-testid="stDataFrame"] {
     font-size: 0.88rem;
     line-height: 1.7;
 }
+
+.compact-output-card {
+    background: #ffffff;
+    border: 1px solid #dce4ea;
+    border-radius: 10px;
+    padding: 10px 12px;
+    min-height: 78px;
+    box-shadow: 0 2px 8px rgba(17, 45, 72, 0.04);
+}
+
+.compact-output-label {
+    color: #607585;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.compact-output-value {
+    color: #17324d;
+    font-size: 0.98rem;
+    font-weight: 750;
+    line-height: 1.25;
+    margin-top: 6px;
+    word-break: break-word;
+}
+
+.compact-output-card-wide {
+    min-height: 72px;
+}
+
+@media (max-width: 900px) {
+    .compact-output-value {
+        font-size: 0.90rem;
+    }
+
+    .compact-output-label {
+        font-size: 0.68rem;
+    }
+}
+
 </style>
 """,
     unsafe_allow_html=True,
@@ -539,6 +579,20 @@ box-shadow:0 4px 14px rgba(17,45,72,.05);min-height:132px;}
 .result-card-title{color:#17324D;font-weight:800;font-size:.92rem;}
 .result-card-value{color:#17324D;font-weight:800;font-size:1.35rem;margin-top:8px;}
 .result-card-caption{color:#647787;font-size:.78rem;margin-top:5px;}
+
+
+.compact-output-card {
+    background: #1F2937 !important;
+    border-color: #374151 !important;
+}
+
+.compact-output-label {
+    color: #B8C5D1 !important;
+}
+
+.compact-output-value {
+    color: #F3F4F6 !important;
+}
 
 </style>
 """,
@@ -1918,26 +1972,47 @@ with st.container(border=True):
     )
 
     readiness_columns = st.columns(4)
-    readiness_columns[0].metric(
-        "VIN",
-        vin_number if vin_valid else "Not ready",
-    )
-    readiness_columns[1].metric(
-        "Analysis",
+
+    readiness_values = [
         (
-            "Axle Whine"
-            if analysis_type == ANALYSIS_AXLE
-            else "Transfer Case"
+            "VIN",
+            vin_number if vin_valid else "Not ready",
         ),
-    )
-    readiness_columns[2].metric(
-        "Configuration",
-        vehicle_configuration,
-    )
-    readiness_columns[3].metric(
-        "Input Status",
-        "Ready" if can_continue else "Incomplete",
-    )
+        (
+            "Analysis",
+            (
+                "Axle Whine"
+                if analysis_type == ANALYSIS_AXLE
+                else "Transfer Case"
+            ),
+        ),
+        (
+            "Configuration",
+            vehicle_configuration,
+        ),
+        (
+            "Input Status",
+            "Ready" if can_continue else "Incomplete",
+        ),
+    ]
+
+    for column, (
+        label,
+        value,
+    ) in zip(
+        readiness_columns,
+        readiness_values,
+    ):
+        with column:
+            st.markdown(
+                f"""
+<div class="compact-output-card">
+    <div class="compact-output-label">{label}</div>
+    <div class="compact-output-value">{value}</div>
+</div>
+""",
+                unsafe_allow_html=True,
+            )
 
     if can_continue:
         st.success(
@@ -2316,61 +2391,114 @@ def render_analysis_dashboard(
 
         first_row = st.columns(4)
 
-        first_row[0].metric(
-            "Overall Status",
-            overall_status,
-        )
-
-        first_row[1].metric(
-            "Worst Order",
-            format_order_value(
-                worst_order
+        first_row_values = [
+            (
+                "Overall Status",
+                overall_status,
             ),
-        )
+            (
+                "Worst Order",
+                format_order_value(
+                    worst_order
+                ),
+            ),
+            (
+                "Worst Channel",
+                worst_channel,
+            ),
+            (
+                "Maximum Peak",
+                peak_display,
+            ),
+        ]
 
-        first_row[2].metric(
-            "Worst Channel",
-            worst_channel,
-        )
-
-        first_row[3].metric(
-            "Maximum Peak",
-            peak_display,
-        )
+        for column, (
+            label,
+            value,
+        ) in zip(
+            first_row,
+            first_row_values,
+        ):
+            with column:
+                st.markdown(
+                    f"""
+<div class="compact-output-card">
+    <div class="compact-output-label">{label}</div>
+    <div class="compact-output-value">{value}</div>
+</div>
+""",
+                    unsafe_allow_html=True,
+                )
 
         second_row = st.columns(4)
 
-        second_row[0].metric(
-            "Peak RPM",
-            peak_rpm_display,
-        )
+        second_row_values = [
+            (
+                "Peak RPM",
+                peak_rpm_display,
+            ),
+            (
+                "Maximum Margin",
+                margin_display,
+            ),
+            (
+                "Evaluated Orders",
+                evaluated_orders,
+            ),
+            (
+                "Analysis Module",
+                analysis_display,
+            ),
+        ]
 
-        second_row[1].metric(
-            "Maximum Margin",
-            margin_display,
-        )
-
-        second_row[2].metric(
-            "Evaluated Orders",
-            evaluated_orders,
-        )
-
-        second_row[3].metric(
-            "Analysis Module",
-            analysis_display,
-        )
+        for column, (
+            label,
+            value,
+        ) in zip(
+            second_row,
+            second_row_values,
+        ):
+            with column:
+                st.markdown(
+                    f"""
+<div class="compact-output-card">
+    <div class="compact-output-label">{label}</div>
+    <div class="compact-output-value">{value}</div>
+</div>
+""",
+                    unsafe_allow_html=True,
+                )
 
         summary_row = st.columns(2)
 
-        summary_row[0].metric(
-            "VIN",
-            vin,
-        )
+        summary_values = [
+            (
+                "VIN",
+                vin,
+            ),
+            (
+                "Vehicle Configuration",
+                vehicle_configuration,
+            ),
+        ]
 
-        summary_row[1].metric(
-            "Vehicle Configuration",
-            vehicle_configuration,
-        )
+        for column, (
+            label,
+            value,
+        ) in zip(
+            summary_row,
+            summary_values,
+        ):
+            with column:
+                st.markdown(
+                    f"""
+<div class="compact-output-card compact-output-card-wide">
+    <div class="compact-output-label">{label}</div>
+    <div class="compact-output-value">{value}</div>
+</div>
+""",
+                    unsafe_allow_html=True,
+                )
 
         if overall_status == "PASS":
             st.success(
