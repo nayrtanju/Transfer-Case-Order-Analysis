@@ -1900,16 +1900,10 @@ with st.container(border=True):
         )
 
     if uploaded_file is not None:
-        file_columns = st.columns(3)
-        file_columns[0].metric("File", uploaded_file.name)
-        file_columns[1].metric(
-            "Format",
-            uploaded_file.name.rsplit(".", 1)[-1].upper(),
-        )
-        file_columns[2].metric(
-            "Size",
-            f"{uploaded_file.size / 1024 / 1024:.1f} MB",
-        )
+        with upload_column:
+            st.success(
+                "✓ Measurement file loaded successfully."
+            )
 
 
 if analysis_type == ANALYSIS_AXLE:
